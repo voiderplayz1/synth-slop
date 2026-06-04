@@ -42,18 +42,16 @@ body {
     -webkit-font-smoothing: antialiased;
 }
 
-/* ── Main two-column layout ── */
+/* ── Main layout — centered as before ── */
 .page-layout {
-    display: flex;
-    align-items: flex-start;
-    gap: 16px;
     width: 100%;
-    max-width: 1200px;
+    max-width: 950px;
+    display: contents; /* transparent wrapper, children flow normally */
 }
 
 .main-col {
-    flex: 1;
-    min-width: 0;
+    width: 100%;
+    max-width: 950px;
     display: flex;
     flex-direction: column;
     gap: 0;
@@ -61,7 +59,7 @@ body {
 
 header {
     width: 100%;
-    max-width: 1200px;
+    max-width: 950px;
     display: flex;
     justify-content: space-between;
     align-items: flex-end;
@@ -329,15 +327,13 @@ input[type="range"]:active::-webkit-slider-thumb {
 .black-key .key-char { font-size: 0.6rem; color: #ffffff; }
 .black-key.active .key-note, .black-key.active .key-char { color: #ffffff; }
 
-/* ── User Presets Sidebar ── */
+/* ── User Presets — fixed top-right ── */
 .user-presets-sidebar {
-    width: 220px;
-    flex-shrink: 0;
-    position: sticky;
+    position: fixed;
     top: 20px;
-    display: flex;
-    flex-direction: column;
-    gap: 0;
+    right: 20px;
+    width: 210px;
+    z-index: 100;
 }
 
 .user-presets-panel {
@@ -500,7 +496,7 @@ input[type="range"]:active::-webkit-slider-thumb {
 
 .status-bar {
     width: 100%;
-    max-width: 1200px;
+    max-width: 950px;
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -1360,6 +1356,8 @@ document.getElementById('preset-row').addEventListener('click', () => {
 
 loadUserPresetsFromStorage();
 renderUserPresets();
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 updateAllLabels();
 applyAudioParams();
