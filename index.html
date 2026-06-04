@@ -42,9 +42,26 @@ body {
     -webkit-font-smoothing: antialiased;
 }
 
+/* ── Main two-column layout ── */
+.page-layout {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+    width: 100%;
+    max-width: 1200px;
+}
+
+.main-col {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+}
+
 header {
     width: 100%;
-    max-width: 950px;
+    max-width: 1200px;
     display: flex;
     justify-content: space-between;
     align-items: flex-end;
@@ -74,7 +91,6 @@ header p {
     border-radius: var(--radius-lg);
     padding: 24px;
     width: 100%;
-    max-width: 950px;
     display: flex;
     flex-direction: column;
     gap: 24px;
@@ -207,7 +223,6 @@ input[type="range"]:active::-webkit-slider-thumb {
 
 .keyboard-wrap {
     width: 100%;
-    max-width: 950px;
     display: flex;
     flex-direction: column;
     gap: 8px;
@@ -314,28 +329,26 @@ input[type="range"]:active::-webkit-slider-thumb {
 .black-key .key-char { font-size: 0.6rem; color: #ffffff; }
 .black-key.active .key-note, .black-key.active .key-char { color: #ffffff; }
 
-/* ── User Presets ── */
-.user-presets-section {
-    width: 100%;
-    max-width: 950px;
-    margin-top: 16px;
+/* ── User Presets Sidebar ── */
+.user-presets-sidebar {
+    width: 220px;
+    flex-shrink: 0;
+    position: sticky;
+    top: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
 }
 
 .user-presets-panel {
     background: var(--bg-panel);
     border: 1px solid var(--border-light);
     border-radius: var(--radius-lg);
-    padding: 20px 24px;
+    padding: 16px;
     box-shadow: 0 4px 20px rgba(0,0,0,0.05);
-}
-
-.user-presets-header {
     display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 14px;
-    padding-bottom: 12px;
-    border-bottom: 1px solid var(--border-light);
+    flex-direction: column;
+    gap: 12px;
 }
 
 .user-presets-title {
@@ -344,16 +357,18 @@ input[type="range"]:active::-webkit-slider-thumb {
     letter-spacing: 1.5px;
     text-transform: uppercase;
     color: var(--text-muted);
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--border-light);
 }
 
 .save-preset-row {
     display: flex;
-    gap: 8px;
-    align-items: center;
+    flex-direction: column;
+    gap: 6px;
 }
 
 .save-preset-row input[type="text"] {
-    flex: 1;
+    width: 100%;
     background: var(--bg-input);
     border: 1px solid transparent;
     border-radius: var(--radius-sm);
@@ -363,8 +378,6 @@ input[type="range"]:active::-webkit-slider-thumb {
     color: var(--text-main);
     outline: none;
     transition: border-color 0.15s;
-    min-width: 160px;
-    max-width: 220px;
 }
 
 .save-preset-row input[type="text"]::placeholder {
@@ -377,6 +390,7 @@ input[type="range"]:active::-webkit-slider-thumb {
 }
 
 .btn-save-preset {
+    width: 100%;
     background: var(--accent);
     color: #fff;
     border: none;
@@ -388,7 +402,6 @@ input[type="range"]:active::-webkit-slider-thumb {
     letter-spacing: 0.3px;
     cursor: pointer;
     transition: background 0.15s;
-    white-space: nowrap;
 }
 
 .btn-save-preset:hover {
@@ -397,20 +410,33 @@ input[type="range"]:active::-webkit-slider-thumb {
 
 .user-presets-grid {
     display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    min-height: 36px;
+    flex-direction: column;
+    gap: 6px;
+    max-height: calc(100vh - 280px);
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+.user-presets-grid::-webkit-scrollbar {
+    width: 4px;
+}
+.user-presets-grid::-webkit-scrollbar-track {
+    background: transparent;
+}
+.user-presets-grid::-webkit-scrollbar-thumb {
+    background: var(--border-dark);
+    border-radius: 2px;
 }
 
 .user-preset-chip {
     display: flex;
-    align-items: center;
-    gap: 0;
+    align-items: stretch;
     background: var(--bg-module);
     border: 1px solid var(--border-dark);
-    border-radius: 20px;
+    border-radius: var(--radius-sm);
     overflow: hidden;
     transition: border-color 0.15s, box-shadow 0.15s;
+    width: 100%;
 }
 
 .user-preset-chip:hover {
@@ -427,13 +453,18 @@ input[type="range"]:active::-webkit-slider-thumb {
 .chip-load {
     background: none;
     border: none;
-    padding: 6px 12px 6px 14px;
+    padding: 7px 10px;
     font-family: 'Inter', sans-serif;
     font-size: 0.72rem;
     font-weight: 500;
     color: var(--text-main);
     cursor: pointer;
     transition: color 0.15s;
+    text-align: left;
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
     white-space: nowrap;
 }
 
@@ -446,12 +477,13 @@ input[type="range"]:active::-webkit-slider-thumb {
     background: none;
     border: none;
     border-left: 1px solid var(--border-light);
-    padding: 6px 10px;
+    padding: 6px 8px;
     font-size: 0.85rem;
     color: var(--text-muted);
     cursor: pointer;
     transition: color 0.15s, background 0.15s;
     line-height: 1;
+    flex-shrink: 0;
 }
 
 .chip-delete:hover {
@@ -460,15 +492,15 @@ input[type="range"]:active::-webkit-slider-thumb {
 }
 
 .no-presets-hint {
-    font-size: 0.72rem;
+    font-size: 0.7rem;
     color: var(--text-muted);
     font-style: italic;
-    padding: 4px 0;
+    line-height: 1.5;
 }
 
 .status-bar {
     width: 100%;
-    max-width: 950px;
+    max-width: 1200px;
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -491,6 +523,8 @@ input[type="range"]:active::-webkit-slider-thumb {
 </head>
 <body>
 
+<div class="page-layout">
+<div class="main-col">
 <div class="synth-rack">
     
     <div class="module">
@@ -585,7 +619,7 @@ input[type="range"]:active::-webkit-slider-thumb {
         </div>
 
         <div class="module" style="grid-column: 1 / -1;">
-            <div class="module-title">Effects</div>
+            <div class="module-title">Effects Rack</div>
             <div class="controls-row" style="grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));">
                 <div class="ctrl">
                     <div class="ctrl-label"><span>Reverb</span><span id="val-reverb">0.30</span></div>
@@ -639,21 +673,22 @@ input[type="range"]:active::-webkit-slider-thumb {
     </div>
     <div class="piano-row" id="bottom-piano"></div>
 </div>
+</div><!-- /.main-col -->
 
-<div class="user-presets-section">
+<div class="user-presets-sidebar">
     <div class="user-presets-panel">
-        <div class="user-presets-header">
-            <div class="user-presets-title">My Presets</div>
-            <div class="save-preset-row">
-                <input type="text" id="preset-name-input" placeholder="Name this sound…" maxlength="40" autocomplete="off" spellcheck="false">
-                <button class="btn-save-preset" id="btn-save-preset">Save Current</button>
-            </div>
+        <div class="user-presets-title">My Presets</div>
+        <div class="save-preset-row">
+            <input type="text" id="preset-name-input" placeholder="Name this sound…" maxlength="40" autocomplete="off" spellcheck="false">
+            <button class="btn-save-preset" id="btn-save-preset">Save Current</button>
         </div>
         <div class="user-presets-grid" id="user-presets-grid">
-            <span class="no-presets-hint" id="no-presets-hint">No saved presets yet, save something idk.</span>
+            <span class="no-presets-hint" id="no-presets-hint">No saved presets yet, just save sm idk</span>
         </div>
     </div>
 </div>
+
+</div><!-- /.page-layout -->
 
 <div class="status-bar">
     <div class="status" id="status"></div>
@@ -1159,12 +1194,14 @@ function releaseNote(keyChar) {
 const pressedKeys = new Set();
 window.addEventListener('keydown', e => {
     if (e.repeat) return;
+    if (document.activeElement && document.activeElement.tagName === 'INPUT' && document.activeElement.type === 'text') return;
     let k = e.key.startsWith('F') && e.key.length <= 3 && !isNaN(e.key.slice(1)) ? e.key.toLowerCase() : e.key.toLowerCase();
     if (pressedKeys.has(k)) return;
     pressedKeys.add(k);
     if (allKeys[k]) { e.preventDefault(); triggerNote(k); }
 });
 window.addEventListener('keyup', e => {
+    if (document.activeElement && document.activeElement.tagName === 'INPUT' && document.activeElement.type === 'text') return;
     let k = e.key.startsWith('F') && e.key.length <= 3 && !isNaN(e.key.slice(1)) ? e.key.toLowerCase() : e.key.toLowerCase();
     pressedKeys.delete(k);
     if (allKeys[k]) releaseNote(k);
@@ -1323,8 +1360,6 @@ document.getElementById('preset-row').addEventListener('click', () => {
 
 loadUserPresetsFromStorage();
 renderUserPresets();
-
-// ─────────────────────────────────────────────────────────────────────────────
 
 updateAllLabels();
 applyAudioParams();
