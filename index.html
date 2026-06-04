@@ -314,6 +314,158 @@ input[type="range"]:active::-webkit-slider-thumb {
 .black-key .key-char { font-size: 0.6rem; color: #ffffff; }
 .black-key.active .key-note, .black-key.active .key-char { color: #ffffff; }
 
+/* ── User Presets ── */
+.user-presets-section {
+    width: 100%;
+    max-width: 950px;
+    margin-top: 16px;
+}
+
+.user-presets-panel {
+    background: var(--bg-panel);
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-lg);
+    padding: 20px 24px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+}
+
+.user-presets-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 14px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border-light);
+}
+
+.user-presets-title {
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+}
+
+.save-preset-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.save-preset-row input[type="text"] {
+    flex: 1;
+    background: var(--bg-input);
+    border: 1px solid transparent;
+    border-radius: var(--radius-sm);
+    padding: 7px 10px;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.75rem;
+    color: var(--text-main);
+    outline: none;
+    transition: border-color 0.15s;
+    min-width: 160px;
+    max-width: 220px;
+}
+
+.save-preset-row input[type="text"]::placeholder {
+    color: var(--text-muted);
+}
+
+.save-preset-row input[type="text"]:focus {
+    border-color: var(--accent);
+    background: var(--bg-panel);
+}
+
+.btn-save-preset {
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius-sm);
+    padding: 7px 14px;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+    cursor: pointer;
+    transition: background 0.15s;
+    white-space: nowrap;
+}
+
+.btn-save-preset:hover {
+    background: var(--accent-hover);
+}
+
+.user-presets-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    min-height: 36px;
+}
+
+.user-preset-chip {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    background: var(--bg-module);
+    border: 1px solid var(--border-dark);
+    border-radius: 20px;
+    overflow: hidden;
+    transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.user-preset-chip:hover {
+    border-color: var(--accent);
+    box-shadow: 0 2px 8px var(--accent-glow);
+}
+
+.user-preset-chip.active {
+    border-color: var(--accent);
+    background: var(--bg-panel);
+    box-shadow: 0 2px 10px var(--accent-glow);
+}
+
+.chip-load {
+    background: none;
+    border: none;
+    padding: 6px 12px 6px 14px;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.72rem;
+    font-weight: 500;
+    color: var(--text-main);
+    cursor: pointer;
+    transition: color 0.15s;
+    white-space: nowrap;
+}
+
+.user-preset-chip:hover .chip-load,
+.user-preset-chip.active .chip-load {
+    color: var(--accent);
+}
+
+.chip-delete {
+    background: none;
+    border: none;
+    border-left: 1px solid var(--border-light);
+    padding: 6px 10px;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: color 0.15s, background 0.15s;
+    line-height: 1;
+}
+
+.chip-delete:hover {
+    color: #ef4444;
+    background: rgba(239, 68, 68, 0.06);
+}
+
+.no-presets-hint {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    font-style: italic;
+    padding: 4px 0;
+}
+
 .status-bar {
     width: 100%;
     max-width: 950px;
@@ -433,7 +585,7 @@ input[type="range"]:active::-webkit-slider-thumb {
         </div>
 
         <div class="module" style="grid-column: 1 / -1;">
-            <div class="module-title">Effects Rack</div>
+            <div class="module-title">Effects</div>
             <div class="controls-row" style="grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));">
                 <div class="ctrl">
                     <div class="ctrl-label"><span>Reverb</span><span id="val-reverb">0.30</span></div>
@@ -486,6 +638,21 @@ input[type="range"]:active::-webkit-slider-thumb {
         <span style="color:var(--text-muted); font-family:'Space Mono'; font-size:0.6rem;">Z Row (F8-0)</span>
     </div>
     <div class="piano-row" id="bottom-piano"></div>
+</div>
+
+<div class="user-presets-section">
+    <div class="user-presets-panel">
+        <div class="user-presets-header">
+            <div class="user-presets-title">My Presets</div>
+            <div class="save-preset-row">
+                <input type="text" id="preset-name-input" placeholder="Name this sound…" maxlength="40" autocomplete="off" spellcheck="false">
+                <button class="btn-save-preset" id="btn-save-preset">Save Current</button>
+            </div>
+        </div>
+        <div class="user-presets-grid" id="user-presets-grid">
+            <span class="no-presets-hint" id="no-presets-hint">No saved presets yet, save something idk.</span>
+        </div>
+    </div>
 </div>
 
 <div class="status-bar">
@@ -1015,6 +1182,149 @@ function updateStatus() {
         s.classList.add('playing');
     }
 }
+
+// ── User Presets ──────────────────────────────────────────────────────────────
+
+const USER_PRESETS_KEY = 'unison_synth_user_presets';
+let userPresets = [];
+let activeUserPresetIndex = null;
+
+function loadUserPresetsFromStorage() {
+    try {
+        const raw = localStorage.getItem(USER_PRESETS_KEY);
+        userPresets = raw ? JSON.parse(raw) : [];
+    } catch(e) {
+        userPresets = [];
+    }
+}
+
+function saveUserPresetsToStorage() {
+    try {
+        localStorage.setItem(USER_PRESETS_KEY, JSON.stringify(userPresets));
+    } catch(e) {}
+}
+
+function captureCurrentState() {
+    return {
+        wave:          currentWaveform,
+        harmonyMode:   harmonyMode,
+        harmonyVoices: harmonyVoices,
+        harmonyVol:    harmonyVol,
+        octaveShift:   octaveShift,
+        params:        Object.assign({}, params),
+    };
+}
+
+function applyUserPreset(state) {
+    currentWaveform = state.wave;
+    document.querySelectorAll('[data-wave]').forEach(b =>
+        b.classList.toggle('active', b.dataset.wave === state.wave));
+
+    harmonyMode = state.harmonyMode;
+    document.querySelectorAll('[data-harmony]').forEach(b =>
+        b.classList.toggle('active', b.dataset.harmony === state.harmonyMode));
+
+    harmonyVoices = state.harmonyVoices;
+    harmonyVol    = state.harmonyVol;
+    octaveShift   = state.octaveShift;
+
+    Object.assign(params, state.params);
+
+    // Sync all sliders
+    const map = {
+        voices:'sl-voices', spread:'sl-spread', attack:'sl-attack', release:'sl-release',
+        reverb:'sl-reverb', delay:'sl-delay', delaytime:'sl-delaytime', chorus:'sl-chorus',
+        filter:'sl-filter', res:'sl-res', volume:'sl-volume', dist:'sl-dist',
+        crush:'sl-crush', flanger:'sl-flanger'
+    };
+    for (const [k, id] of Object.entries(map)) {
+        const el = document.getElementById(id);
+        if (el && params[k] !== undefined) el.value = params[k];
+    }
+    const octEl = document.getElementById('sl-octave');
+    if (octEl) octEl.value = octaveShift;
+    const hvEl = document.getElementById('sl-harmony-voices');
+    if (hvEl) hvEl.value = harmonyVoices;
+    const hvolEl = document.getElementById('sl-harmony-vol');
+    if (hvolEl) hvolEl.value = harmonyVol;
+
+    // Deactivate built-in presets
+    document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+
+    updateAllLabels();
+    applyAudioParams();
+}
+
+function renderUserPresets() {
+    const grid   = document.getElementById('user-presets-grid');
+    const hint   = document.getElementById('no-presets-hint');
+    grid.innerHTML = '';
+
+    if (userPresets.length === 0) {
+        hint.style.display = '';
+        grid.appendChild(hint);
+        return;
+    }
+
+    userPresets.forEach((preset, idx) => {
+        const chip = document.createElement('div');
+        chip.className = 'user-preset-chip' + (idx === activeUserPresetIndex ? ' active' : '');
+
+        const loadBtn = document.createElement('button');
+        loadBtn.className = 'chip-load';
+        loadBtn.textContent = preset.name;
+        loadBtn.title = 'Load "' + preset.name + '"';
+        loadBtn.addEventListener('click', () => {
+            applyUserPreset(preset.state);
+            activeUserPresetIndex = idx;
+            renderUserPresets();
+        });
+
+        const delBtn = document.createElement('button');
+        delBtn.className = 'chip-delete';
+        delBtn.textContent = '×';
+        delBtn.title = 'Delete "' + preset.name + '"';
+        delBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            userPresets.splice(idx, 1);
+            if (activeUserPresetIndex === idx) activeUserPresetIndex = null;
+            else if (activeUserPresetIndex > idx) activeUserPresetIndex--;
+            saveUserPresetsToStorage();
+            renderUserPresets();
+        });
+
+        chip.appendChild(loadBtn);
+        chip.appendChild(delBtn);
+        grid.appendChild(chip);
+    });
+}
+
+document.getElementById('btn-save-preset').addEventListener('click', () => {
+    const nameInput = document.getElementById('preset-name-input');
+    const name = nameInput.value.trim() || ('Sound ' + (userPresets.length + 1));
+    userPresets.push({ name, state: captureCurrentState() });
+    activeUserPresetIndex = userPresets.length - 1;
+    saveUserPresetsToStorage();
+    renderUserPresets();
+    nameInput.value = '';
+    nameInput.focus();
+});
+
+document.getElementById('preset-name-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter') document.getElementById('btn-save-preset').click();
+});
+
+// Deactivate user preset highlight when built-in preset is clicked
+document.getElementById('preset-row').addEventListener('click', () => {
+    activeUserPresetIndex = null;
+    // re-render after a tick so applyPreset runs first
+    setTimeout(renderUserPresets, 0);
+});
+
+loadUserPresetsFromStorage();
+renderUserPresets();
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 updateAllLabels();
 applyAudioParams();
