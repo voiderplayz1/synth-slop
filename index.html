@@ -546,6 +546,10 @@ input[type="range"]:active::-webkit-slider-thumb {
                     <button class="sel-btn" data-wave="pwm">PWM</button>
                     <button class="sel-btn" data-wave="noise">Noise</button>
                     <button class="sel-btn" data-wave="frog">Frog</button>
+                    <button class="sel-btn" data-wave="hypersaw">Hyper Saw</button>
+                    <button class="sel-btn" data-wave="glassbell">Glass Bell</button>
+                    <button class="sel-btn" data-wave="theremin">Theremin</button>
+                    <button class="sel-btn" data-wave="laser">Laser</button>
                 </div>
             </div>
 
@@ -564,7 +568,7 @@ input[type="range"]:active::-webkit-slider-thumb {
                 </div>
                 <div class="ctrl">
                     <div class="ctrl-label"><span>Octave</span><span id="val-octave">0</span></div>
-                    <input type="range" id="sl-octave" min="-2" max="2" step="1" value="0">
+                    <input type="range" id="sl-octave" min="-3" max="3" step="1" value="0">
                 </div>
             </div>
         </div>
@@ -644,6 +648,10 @@ input[type="range"]:active::-webkit-slider-thumb {
                 <div class="ctrl">
                     <div class="ctrl-label"><span>Flanger</span><span id="val-flanger">0.00</span></div>
                     <input type="range" id="sl-flanger" min="0" max="4" step="0.01" value="0">
+                </div>
+                <div class="ctrl">
+                    <div class="ctrl-label"><span>Bass Boost</span><span id="val-bassboost">0</span></div>
+                    <input type="range" id="sl-bassboost" min="0" max="24" step="0.5" value="0">
                 </div>
             </div>
         </div>
@@ -758,6 +766,11 @@ flangerLFOGain.gain.value    = 0.003;
 const analyser = audioCtx.createAnalyser();
 analyser.fftSize = 256;
 
+const bassBoostEQ = audioCtx.createBiquadFilter();
+bassBoostEQ.type = 'lowshelf';
+bassBoostEQ.frequency.value = 120;
+bassBoostEQ.gain.value = 0;
+
 let bitDepth = 16;
 
 distInput.connect(distNode);
@@ -789,7 +802,8 @@ reverbGain.connect(masterGain);
 delayMix.connect(masterGain);
 flangerMix.connect(masterGain);
 
-masterGain.connect(analyser);
+masterGain.connect(bassBoostEQ);
+bassBoostEQ.connect(analyser);
 analyser.connect(audioCtx.destination);
 
 let currentWaveform = 'sawtooth';
@@ -814,6 +828,7 @@ const params = {
     dist:      0,
     crush:     16,
     flanger:   0,
+    bassboost: 0,
 };
 
 const HARMONY_INTERVALS = {
@@ -865,6 +880,7 @@ function applyAudioParams() {
     bitDepth = params.crush;
     flangerLFO.frequency.setTargetAtTime(params.flanger, t, 0.05);
     flangerMix.gain.setTargetAtTime(params.flanger > 0 ? 0.45 : 0, t, 0.1);
+    bassBoostEQ.gain.setTargetAtTime(params.bassboost, t, 0.05);
 }
 
 function fmt(v, decimals = 2) {
@@ -889,12 +905,14 @@ const sliders = [
     { id:'sl-dist',           key:'dist',              label:'val-dist',           parse:parseFloat, cb: v => { distNode.curve = makeDistCurve(v); distWet.gain.setTargetAtTime(v, audioCtx.currentTime, 0.05); distDryPass.gain.setTargetAtTime(1-v*0.7, audioCtx.currentTime, 0.05); } },
     { id:'sl-crush',          key:'crush',             label:'val-crush',          parse:parseFloat, cb: v => { bitDepth = v; } },
     { id:'sl-flanger',        key:'flanger',           label:'val-flanger',        parse:parseFloat, cb: v => { flangerLFO.frequency.setTargetAtTime(v, audioCtx.currentTime, 0.05); flangerMix.gain.setTargetAtTime(v > 0 ? 0.45 : 0, audioCtx.currentTime, 0.1); } },
+    { id:'sl-bassboost',      key:'bassboost',         label:'val-bassboost',      parse:parseFloat, cb: v => { bassBoostEQ.gain.setTargetAtTime(v, audioCtx.currentTime, 0.05); } },
     { id:'sl-harmony-voices', key:'_harmonyVoices',    label:'val-harmony-voices', parse:parseInt,   cb: v => { harmonyVoices = v; } },
     { id:'sl-harmony-vol',    key:'_harmonyVol',       label:'val-harmony-vol',    parse:parseFloat, cb: v => { harmonyVol = v; } },
 ];
 
 function labelText(s, v) {
     if (s.key === 'filter')          return fmt(v, 0);
+    if (s.key === 'bassboost')       return parseFloat(v) % 1 === 0 ? '+' + v + 'dB' : '+' + parseFloat(v).toFixed(1) + 'dB';
     if (s.key === '_octave')         return v >= 0 ? '+' + v : String(v);
     if (s.key === '_harmonyVoices')  return String(v);
     if (s.key === '_harmonyVol')     return fmt(v);
@@ -1079,6 +1097,101 @@ function makeSingleVoice(waveform, freq, detuneVal, chorusDepth, voiceIdx, gainN
         return { stop: t => { carrier.stop(t); modOsc.stop(t); subOsc.stop(t); } };
     }
 
+    if (waveform === 'hypersaw') {
+        // 7 detuned saws + sub oscillator for maximum thicc wall-of-sound
+        const numSaws = 7;
+        const oscNodes = [];
+        const subOsc = audioCtx.createOscillator();
+        const subGain = audioCtx.createGain();
+        subOsc.type = 'sawtooth';
+        subOsc.frequency.value = freq * 0.5;
+        subGain.gain.value = 0.5;
+        subOsc.connect(subGain);
+        subGain.connect(gainNode);
+        for (let si = 0; si < numSaws; si++) {
+            const o = audioCtx.createOscillator();
+            o.type = 'sawtooth';
+            o.frequency.value = freq;
+            const spread = (si / (numSaws - 1) - 0.5) * 80;
+            o.detune.value = detuneVal + spread;
+            const lfo = audioCtx.createOscillator();
+            const lfoG = audioCtx.createGain();
+            lfo.frequency.value = 0.15 + si * 0.07;
+            lfoG.gain.value = 3 + si * 1.5;
+            lfo.connect(lfoG); lfoG.connect(o.detune);
+            lfo.start(); o.start();
+            o.connect(gainNode);
+            oscNodes.push({ o, lfo });
+        }
+        subOsc.start();
+        return { stop: t => { oscNodes.forEach(({ o, lfo }) => { o.stop(t); lfo.stop(t); }); subOsc.stop(t); } };
+    }
+
+    if (waveform === 'glassbell') {
+        // FM bell: carrier sine modulated by a higher sine, quick attack percussive decay feel
+        const carrier = audioCtx.createOscillator();
+        const modOsc  = audioCtx.createOscillator();
+        const modGain = audioCtx.createGain();
+        const envGain = audioCtx.createGain();
+        carrier.type = 'sine';
+        modOsc.type  = 'sine';
+        carrier.frequency.value = freq;
+        modOsc.frequency.value  = freq * 3.5;
+        modGain.gain.value      = freq * 2.0;
+        envGain.gain.setValueAtTime(1, audioCtx.currentTime);
+        envGain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 3.0);
+        carrier.detune.value = detuneVal;
+        modOsc.connect(modGain);
+        modGain.connect(carrier.frequency);
+        carrier.connect(envGain);
+        envGain.connect(gainNode);
+        carrier.start(); modOsc.start();
+        return { stop: t => { carrier.stop(t); modOsc.stop(t); } };
+    }
+
+    if (waveform === 'theremin') {
+        // Smooth sine with a slow vibrato LFO and gentle harmonic shimmer
+        const osc = audioCtx.createOscillator();
+        const shimmer = audioCtx.createOscillator();
+        const shimmerGain = audioCtx.createGain();
+        const vibratoLFO = audioCtx.createOscillator();
+        const vibratoGain = audioCtx.createGain();
+        osc.type = 'sine';
+        shimmer.type = 'sine';
+        shimmer.frequency.value = freq * 2.01;
+        shimmerGain.gain.value = 0.08;
+        osc.frequency.value = freq;
+        osc.detune.value = detuneVal;
+        vibratoLFO.frequency.value = 5.5 + voiceIdx * 0.3;
+        vibratoGain.gain.value = 6;
+        vibratoLFO.connect(vibratoGain);
+        vibratoGain.connect(osc.detune);
+        shimmer.connect(shimmerGain);
+        shimmerGain.connect(gainNode);
+        osc.connect(gainNode);
+        vibratoLFO.start(); osc.start(); shimmer.start();
+        return { stop: t => { osc.stop(t); shimmer.stop(t); vibratoLFO.stop(t); } };
+    }
+
+    if (waveform === 'laser') {
+        // Pitch-swept square with rapid frequency drop and ring mod buzz
+        const osc = audioCtx.createOscillator();
+        const ringCarrier = audioCtx.createOscillator();
+        const ringGain = audioCtx.createGain();
+        osc.type = 'square';
+        ringCarrier.type = 'sine';
+        ringCarrier.frequency.value = 440;
+        ringGain.gain.value = 0.3;
+        osc.detune.value = detuneVal;
+        osc.frequency.setValueAtTime(freq * 4, audioCtx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(freq, audioCtx.currentTime + 0.12);
+        ringCarrier.connect(ringGain);
+        ringGain.connect(gainNode);
+        osc.connect(gainNode);
+        osc.start(); ringCarrier.start();
+        return { stop: t => { osc.stop(t); ringCarrier.stop(t); } };
+    }
+
     if (waveform === 'pwm') {
         const o1 = audioCtx.createOscillator();
         const o2 = audioCtx.createOscillator();
@@ -1145,7 +1258,7 @@ function triggerNote(keyChar) {
     if (harmonyMode !== 'off') {
         const intervals = HARMONY_INTERVALS[harmonyMode] || [];
         const numH = Math.min(harmonyVoices, intervals.length);
-        const hWave = (currentWaveform === 'frog' || currentWaveform === 'noise' || currentWaveform === 'pwm') ? 'sine' : currentWaveform;
+        const hWave = (currentWaveform === 'frog' || currentWaveform === 'hypersaw' || currentWaveform === 'glassbell' || currentWaveform === 'theremin' || currentWaveform === 'laser' || currentWaveform === 'noise' || currentWaveform === 'pwm') ? 'sine' : currentWaveform;
         for (let hi = 0; hi < numH; hi++) {
             const hFreq  = baseFreq * Math.pow(2, intervals[hi] / 12);
             const hGain  = audioCtx.createGain();
@@ -1268,7 +1381,7 @@ function applyUserPreset(state) {
         voices:'sl-voices', spread:'sl-spread', attack:'sl-attack', release:'sl-release',
         reverb:'sl-reverb', delay:'sl-delay', delaytime:'sl-delaytime', chorus:'sl-chorus',
         filter:'sl-filter', res:'sl-res', volume:'sl-volume', dist:'sl-dist',
-        crush:'sl-crush', flanger:'sl-flanger'
+        crush:'sl-crush', flanger:'sl-flanger', bassboost:'sl-bassboost'
     };
     for (const [k, id] of Object.entries(map)) {
         const el = document.getElementById(id);
