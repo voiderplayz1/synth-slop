@@ -46,7 +46,9 @@ body {
 .page-layout {
     width: 100%;
     max-width: 950px;
-    display: contents; /* transparent wrapper, children flow normally */
+    display: flex;
+    flex-direction: column;
+    gap: 0;
 }
 
 .main-col {
@@ -59,11 +61,10 @@ body {
 
 header {
     width: 100%;
-    max-width: 950px;
     display: flex;
     justify-content: space-between;
     align-items: flex-end;
-    margin-bottom: 24px;
+    margin-bottom: 16px;
     padding-bottom: 16px;
     border-bottom: 1px solid var(--border-light);
 }
@@ -515,11 +516,532 @@ input[type="range"]:active::-webkit-slider-thumb {
 
 .status.playing { color: var(--accent); }
 
+/* ── Mode Toggle Button ── */
+.mode-toggle-row {
+    width: 100%;
+    max-width: 950px;
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+}
+
+.mode-tab {
+    background: var(--bg-panel);
+    border: 1px solid var(--border-dark);
+    color: var(--text-muted);
+    padding: 8px 20px;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    transition: all 0.15s ease;
+}
+
+.mode-tab:hover {
+    border-color: var(--accent);
+    color: var(--text-main);
+}
+
+.mode-tab.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+    box-shadow: 0 2px 8px var(--accent-glow);
+}
+
+/* ── Piano Roll Panel ── */
+#bar-mode-panel {
+    display: none;
+    width: 100%;
+    max-width: 950px;
+    flex-direction: column;
+    gap: 16px;
+}
+
+#bar-mode-panel.visible {
+    display: flex;
+}
+
+.bar-rack {
+    background: var(--bg-panel);
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-lg);
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+}
+
+/* ── Bar Mode Transport Row ── */
+.transport-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.transport-btn {
+    background: var(--bg-input);
+    border: 1px solid var(--border-dark);
+    color: var(--text-main);
+    width: 36px;
+    height: 36px;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    transition: all 0.15s;
+    flex-shrink: 0;
+}
+
+.transport-btn:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+}
+
+.transport-btn.play-active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+    box-shadow: 0 2px 8px var(--accent-glow);
+}
+
+.transport-label {
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+}
+
+.transport-num {
+    background: var(--bg-input);
+    border: 1px solid var(--border-dark);
+    border-radius: var(--radius-sm);
+    padding: 4px 8px;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.75rem;
+    color: var(--accent);
+    width: 60px;
+    text-align: center;
+    outline: none;
+    transition: border-color 0.15s;
+}
+
+.transport-num:focus {
+    border-color: var(--accent);
+    background: var(--bg-panel);
+}
+
+.transport-sep {
+    color: var(--border-dark);
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+.meter-display {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    padding: 4px 8px;
+    background: var(--bg-module);
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border-light);
+    min-width: 60px;
+    text-align: center;
+}
+
+/* ── Section Tabs ── */
+.sections-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    overflow-x: auto;
+    padding-bottom: 2px;
+    flex-wrap: nowrap;
+}
+
+.sections-row::-webkit-scrollbar { height: 3px; }
+.sections-row::-webkit-scrollbar-thumb { background: var(--border-dark); border-radius: 2px; }
+
+.section-tab {
+    background: var(--bg-input);
+    border: 1px solid var(--border-dark);
+    color: var(--text-muted);
+    padding: 5px 14px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+    white-space: nowrap;
+    transition: all 0.15s;
+    flex-shrink: 0;
+}
+
+.section-tab:hover {
+    border-color: var(--accent);
+    color: var(--text-main);
+}
+
+.section-tab.active {
+    background: var(--bg-panel);
+    border-color: var(--accent);
+    color: var(--accent);
+    box-shadow: 0 2px 6px var(--accent-glow);
+}
+
+.section-tab.add-btn {
+    background: none;
+    border-style: dashed;
+    color: var(--text-muted);
+}
+
+.section-tab.add-btn:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: var(--accent-glow);
+}
+
+.section-tab.del-btn {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    padding: 5px 6px;
+    font-size: 0.9rem;
+}
+
+.section-tab.del-btn:hover {
+    color: #ef4444;
+}
+
+/* ── Piano Roll Grid ── */
+.roll-outer {
+    display: flex;
+    overflow: hidden;
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-md);
+    background: #1a1a1f;
+    position: relative;
+    height: 420px;
+}
+
+.roll-keys {
+    width: 68px;
+    flex-shrink: 0;
+    overflow-y: scroll;
+    overflow-x: hidden;
+    border-right: 1px solid rgba(255,255,255,0.08);
+    background: #141418;
+    position: relative;
+    z-index: 2;
+    scrollbar-width: none;
+}
+
+.roll-keys::-webkit-scrollbar { display: none; }
+
+.roll-key-item {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding-right: 7px;
+    cursor: pointer;
+    transition: background 0.08s;
+    position: relative;
+    flex-shrink: 0;
+}
+
+.roll-key-item:hover {
+    background: rgba(217,119,6,0.1) !important;
+}
+
+.roll-key-item.white-roll {
+    background: #1c1c22;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+
+.roll-key-item.black-roll {
+    background: #111115;
+    border-bottom: 1px solid rgba(255,255,255,0.03);
+}
+
+.roll-key-item .rk-name {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.5rem;
+    color: rgba(255,255,255,0.25);
+    letter-spacing: 0;
+}
+
+.roll-key-item.black-roll .rk-name {
+    color: rgba(255,255,255,0.18);
+    font-size: 0.45rem;
+}
+
+.roll-key-item.c-key .rk-name {
+    color: rgba(217,119,6,0.7);
+}
+
+.roll-scroll {
+    flex: 1;
+    overflow: auto;
+    position: relative;
+}
+
+.roll-scroll::-webkit-scrollbar { width: 6px; height: 6px; }
+.roll-scroll::-webkit-scrollbar-track { background: #111115; }
+.roll-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 3px; }
+
+.roll-canvas-wrap {
+    position: relative;
+    height: 100%;
+}
+
+.roll-grid-canvas {
+    position: absolute;
+    top: 0; left: 0;
+    pointer-events: none;
+    display: block;
+}
+
+.roll-note-layer {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    cursor: crosshair;
+}
+
+.roll-playhead {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: var(--accent);
+    pointer-events: none;
+    z-index: 10;
+    box-shadow: 0 0 6px var(--accent);
+    opacity: 0;
+    transition: opacity 0.1s;
+}
+
+.roll-playhead.visible { opacity: 1; }
+
+/* ── Note element ── */
+.roll-note {
+    position: absolute;
+    background: var(--accent);
+    border-radius: 3px 3px 3px 3px;
+    cursor: pointer;
+    border: 1px solid rgba(255,255,255,0.2);
+    box-shadow: 0 1px 4px rgba(0,0,0,0.4);
+    transition: filter 0.05s;
+    min-width: 4px;
+}
+
+.roll-note:hover {
+    filter: brightness(1.2);
+}
+
+.roll-note.selected {
+    border-color: #fff;
+    box-shadow: 0 0 0 1px #fff, 0 1px 6px rgba(0,0,0,0.5);
+}
+
+.roll-note .note-resize {
+    position: absolute;
+    right: 0; top: 0; bottom: 0;
+    width: 6px;
+    cursor: ew-resize;
+    border-radius: 0 3px 3px 0;
+}
+
+.roll-note .note-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.45rem;
+    color: rgba(255,255,255,0.7);
+    position: absolute;
+    left: 3px;
+    top: 50%;
+    transform: translateY(-50%);
+    pointer-events: none;
+    white-space: nowrap;
+    overflow: hidden;
+    max-width: calc(100% - 10px);
+}
+
+/* ── Roll Toolbar ── */
+.roll-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.roll-tool-btn {
+    background: var(--bg-input);
+    border: 1px solid var(--border-dark);
+    color: var(--text-muted);
+    padding: 5px 12px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.65rem;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+    transition: all 0.15s;
+}
+
+.roll-tool-btn:hover {
+    border-color: var(--accent);
+    color: var(--text-main);
+}
+
+.roll-tool-btn.active {
+    background: var(--bg-panel);
+    border-color: var(--accent);
+    color: var(--accent);
+}
+
+.roll-zoom-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-left: auto;
+}
+
+.roll-zoom-btn {
+    background: var(--bg-input);
+    border: 1px solid var(--border-dark);
+    color: var(--text-main);
+    width: 26px;
+    height: 26px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s;
+}
+
+.roll-zoom-btn:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+}
+
+/* ── Sound picker inside bar mode ── */
+.bar-sound-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.bar-sound-label {
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    flex-shrink: 0;
+}
+
+.bar-sound-chip {
+    background: var(--bg-input);
+    border: 1px solid var(--border-dark);
+    color: var(--text-muted);
+    padding: 4px 10px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.65rem;
+    font-weight: 500;
+    transition: all 0.15s;
+    white-space: nowrap;
+}
+
+.bar-sound-chip:hover {
+    border-color: var(--accent);
+    color: var(--text-main);
+}
+
+.bar-sound-chip.active {
+    background: var(--bg-panel);
+    border-color: var(--accent);
+    color: var(--accent);
+    box-shadow: 0 1px 4px var(--accent-glow);
+}
+
+/* ── Bar Presets in sidebar ── */
+.sidebar-tab-row {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 4px;
+}
+
+.sidebar-tab {
+    flex: 1;
+    background: var(--bg-input);
+    border: 1px solid transparent;
+    color: var(--text-muted);
+    padding: 5px 4px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.62rem;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+    text-align: center;
+    transition: all 0.15s;
+}
+
+.sidebar-tab:hover { color: var(--text-main); }
+
+.sidebar-tab.active {
+    background: var(--bg-panel);
+    border-color: var(--accent);
+    color: var(--accent);
+}
+
+.sound-presets-grid,
+.bar-presets-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    max-height: calc(100vh - 320px);
+    overflow-y: auto;
+}
+
+.sound-presets-grid::-webkit-scrollbar,
+.bar-presets-grid::-webkit-scrollbar { width: 4px; }
+.sound-presets-grid::-webkit-scrollbar-thumb,
+.bar-presets-grid::-webkit-scrollbar-thumb { background: var(--border-dark); border-radius: 2px; }
+
 </style>
 </head>
 <body>
 
 <div class="page-layout">
+
+<header>
+    <div>
+        <h1>Unison Synth</h1>
+    </div>
+    <p>POLYPHONIC SYNTHESIZER</p>
+</header>
+
+<!-- ── Mode Tabs ── -->
+<div class="mode-toggle-row">
+    <button class="mode-tab active" id="tab-synth" onclick="switchMode('synth')">⌨ Synth</button>
+    <button class="mode-tab" id="tab-bar" onclick="switchMode('bar')">𝄞 Bar Mode</button>
+</div>
+
 <div class="main-col">
 <div class="synth-rack">
     
@@ -679,20 +1201,87 @@ input[type="range"]:active::-webkit-slider-thumb {
 </div>
 </div><!-- /.main-col -->
 
-<div class="user-presets-sidebar">
-    <div class="user-presets-panel">
-        <div class="user-presets-title">My Presets</div>
-        <div class="save-preset-row">
-            <input type="text" id="preset-name-input" placeholder="Name this sound…" maxlength="40" autocomplete="off" spellcheck="false">
-            <button class="btn-save-preset" id="btn-save-preset">Save Current</button>
+</div><!-- /.page-layout -->
+
+<!-- ── Bar Mode Panel (outside page-layout so it can be full width, but same max) ── -->
+<div id="bar-mode-panel">
+    <div class="bar-rack">
+        <!-- Sound picker -->
+        <div class="bar-sound-row">
+            <span class="bar-sound-label">Sound</span>
+            <div id="bar-sound-chips" style="display:flex;gap:6px;flex-wrap:wrap;"></div>
         </div>
-        <div class="user-presets-grid" id="user-presets-grid">
-            <span class="no-presets-hint" id="no-presets-hint">No saved presets yet, just save sm idk</span>
+        <!-- Transport -->
+        <div class="transport-row">
+            <button class="transport-btn" id="btn-play" title="Play / Pause" onclick="barTransportPlay()">▶</button>
+            <button class="transport-btn" id="btn-restart" title="Restart" onclick="barTransportRestart()">⏮</button>
+            <span class="transport-label">BPM</span>
+            <input class="transport-num" type="number" id="bpm-input" value="120" min="20" max="300" step="1" oninput="onBpmChange()">
+            <span class="transport-label">Meter</span>
+            <input class="transport-num" type="number" id="beats-num" value="4" min="1" max="16" step="1" style="width:44px" oninput="onMeterChange()">
+            <span class="transport-sep">/</span>
+            <input class="transport-num" type="number" id="beats-denom" value="4" min="1" max="16" step="1" style="width:44px" oninput="onMeterChange()">
+            <span class="transport-label" style="margin-left:8px;">Bars</span>
+            <input class="transport-num" type="number" id="bars-per-section" value="2" min="1" max="32" step="1" style="width:50px" oninput="onBarsChange()">
+            <div class="meter-display" id="playhead-display">1 : 1</div>
+        </div>
+        <!-- Section tabs -->
+        <div class="sections-row" id="sections-row"></div>
+        <!-- Roll toolbar -->
+        <div class="roll-toolbar">
+            <button class="roll-tool-btn active" id="tool-draw" onclick="setRollTool('draw')">✏ Draw</button>
+            <button class="roll-tool-btn" id="tool-erase" onclick="setRollTool('erase')">✕ Erase</button>
+            <button class="roll-tool-btn" id="tool-select" onclick="setRollTool('select')">◻ Select</button>
+            <button class="roll-tool-btn" onclick="clearAllNotes()">Clear Section</button>
+            <div class="roll-zoom-row">
+                <span style="font-size:0.65rem;color:var(--text-muted);font-weight:600;letter-spacing:0.5px;">ZOOM</span>
+                <button class="roll-zoom-btn" onclick="adjustZoom(-0.25)">−</button>
+                <button class="roll-zoom-btn" onclick="adjustZoom(0.25)">+</button>
+            </div>
+        </div>
+        <!-- Piano roll grid -->
+        <div class="roll-outer" id="roll-outer">
+            <div class="roll-keys" id="roll-keys"></div>
+            <div class="roll-scroll" id="roll-scroll">
+                <div class="roll-canvas-wrap" id="roll-canvas-wrap">
+                    <canvas class="roll-grid-canvas" id="roll-grid-canvas"></canvas>
+                    <div class="roll-note-layer" id="roll-note-layer"></div>
+                    <div class="roll-playhead" id="roll-playhead"></div>
+                </div>
+            </div>
         </div>
     </div>
 </div>
 
-</div><!-- /.page-layout -->
+<div class="user-presets-sidebar">
+    <div class="user-presets-panel">
+        <div class="user-presets-title">My Presets</div>
+        <div class="sidebar-tab-row">
+            <button class="sidebar-tab active" id="stab-sound" onclick="switchSidebarTab('sound')">Sounds</button>
+            <button class="sidebar-tab" id="stab-bar" onclick="switchSidebarTab('bar')">Bar Presets</button>
+        </div>
+        <!-- Sound Presets pane -->
+        <div id="sidebar-sound-pane">
+            <div class="save-preset-row">
+                <input type="text" id="preset-name-input" placeholder="Name this sound…" maxlength="40" autocomplete="off" spellcheck="false">
+                <button class="btn-save-preset" id="btn-save-preset">Save Current</button>
+            </div>
+            <div class="user-presets-grid" id="user-presets-grid">
+                <span class="no-presets-hint" id="no-presets-hint">No saved presets yet, just save sm idk</span>
+            </div>
+        </div>
+        <!-- Bar Presets pane -->
+        <div id="sidebar-bar-pane" style="display:none;">
+            <div class="save-preset-row">
+                <input type="text" id="bar-preset-name-input" placeholder="Name this pattern…" maxlength="40" autocomplete="off" spellcheck="false">
+                <button class="btn-save-preset" id="btn-save-bar-preset" onclick="saveBarPreset()">Save Pattern</button>
+            </div>
+            <div class="bar-presets-grid" id="bar-presets-grid">
+                <span class="no-presets-hint" id="no-bar-presets-hint">No bar presets yet. Build something!</span>
+            </div>
+        </div>
+    </div>
+</div>
 
 <div class="status-bar">
     <div class="status" id="status"></div>
@@ -1469,6 +2058,821 @@ document.getElementById('preset-row').addEventListener('click', () => {
 
 loadUserPresetsFromStorage();
 renderUserPresets();
+
+// ── Sidebar tab switching ──────────────────────────────────────────────────────
+function switchSidebarTab(tab) {
+    document.getElementById('stab-sound').classList.toggle('active', tab === 'sound');
+    document.getElementById('stab-bar').classList.toggle('active', tab === 'bar');
+    document.getElementById('sidebar-sound-pane').style.display = tab === 'sound' ? '' : 'none';
+    document.getElementById('sidebar-bar-pane').style.display   = tab === 'bar'   ? '' : 'none';
+}
+
+// ── Mode switching ─────────────────────────────────────────────────────────────
+let currentMode = 'synth';
+
+function switchMode(mode) {
+    currentMode = mode;
+    document.getElementById('tab-synth').classList.toggle('active', mode === 'synth');
+    document.getElementById('tab-bar').classList.toggle('active', mode === 'bar');
+    // Show/hide synth rack + keyboard
+    const mainCol = document.querySelector('.main-col');
+    mainCol.style.display = mode === 'synth' ? '' : 'none';
+    const barPanel = document.getElementById('bar-mode-panel');
+    barPanel.classList.toggle('visible', mode === 'bar');
+    if (mode === 'bar') {
+        switchSidebarTab('bar');
+        setTimeout(initRollIfNeeded, 0);
+    } else {
+        switchSidebarTab('sound');
+    }
+}
+
+// ── Piano Roll ─────────────────────────────────────────────────────────────────
+
+// Full chromatic note list (B6 down to C2) — 60 notes
+const ROLL_NOTES = [];
+(function() {
+    const names = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
+    for (let oct = 7; oct >= 1; oct--) {
+        for (let n = 11; n >= 0; n--) {
+            ROLL_NOTES.push({ name: names[n] + oct, isBlack: [1,3,6,8,10].includes(n), octave: oct, semitone: n });
+        }
+    }
+    // Keep C2–B7 (84 notes)
+})();
+
+// Frequencies
+const NOTE_FREQS = {};
+(function() {
+    const A4 = 440;
+    ROLL_NOTES.forEach(n => {
+        const midi = (n.octave + 1) * 12 + n.semitone;
+        NOTE_FREQS[n.name] = A4 * Math.pow(2, (midi - 69) / 12);
+    });
+})();
+
+// Roll config
+let rollZoom = 1.0;           // horizontal zoom multiplier
+const ROW_H  = 14;            // px per row
+let bpm      = 120;
+let beatsNum = 4;
+let beatsDenom = 4;
+let barsPerSection = 2;
+
+// Project state
+let sections = [];           // array of section objects
+let activeSectionIdx = 0;
+let rollTool = 'draw';
+
+// Bar sound: uses the synth engine with a chosen sound preset
+let barSoundPreset = null;   // null = use current synth, or a captureCurrentState() snapshot
+
+// Playback state
+let isPlaying = false;
+let playStartTime = 0;       // audioCtx time when playback started
+let playPosition  = 0;       // seconds into current section
+let scheduledNotes = [];
+let rafId = null;
+let lookaheadScheduled = 0;  // how far ahead we've scheduled (in section seconds)
+
+function makeSectionId() { return 'S' + Date.now() + Math.random().toString(36).slice(2,5); }
+
+function newSection() {
+    return { id: makeSectionId(), name: 'Section ' + (sections.length + 1), notes: [] };
+}
+
+function sectionDuration() {
+    // duration in seconds for current meter
+    const beatsPerBar = beatsNum;
+    const secondsPerBeat = 60 / bpm;
+    return barsPerSection * beatsPerBar * secondsPerBeat;
+}
+
+function rollWidth() {
+    // total px width of the roll for current section
+    // = barsPerSection * beatsNum * (cellW per beat) * zoom
+    return Math.max(400, barsPerSection * beatsNum * 64 * rollZoom);
+}
+
+function beatCellW() {
+    return 64 * rollZoom;
+}
+
+// ── Init ───────────────────────────────────────────────────────────────────────
+let rollInited = false;
+
+function initRollIfNeeded() {
+    if (rollInited) { renderRoll(); return; }
+    rollInited = true;
+
+    // Default first section
+    sections = [newSection()];
+    activeSectionIdx = 0;
+
+    buildRollKeys();
+    buildSectionTabs();
+    buildBarSoundChips();
+    renderRoll();
+
+    const noteLayer = document.getElementById('roll-note-layer');
+    noteLayer.addEventListener('mousedown', onRollMouseDown);
+    noteLayer.addEventListener('mousemove', onRollMouseMove);
+    noteLayer.addEventListener('mouseup',   onRollMouseUp);
+    noteLayer.addEventListener('mouseleave',onRollMouseUp);
+    noteLayer.addEventListener('contextmenu', e => { e.preventDefault(); onRollRightClick(e); });
+    window.addEventListener('mouseup', onRollMouseUp);
+
+    // Sync roll size when scrolled or resized
+    const rollScroll = document.getElementById('roll-scroll');
+    rollScroll.addEventListener('scroll', () => { drawGrid(); updatePlayhead(); });
+    window.addEventListener('resize', () => { drawGrid(); });
+}
+
+// ── Build mini-keyboard on left ────────────────────────────────────────────────
+function buildRollKeys() {
+    const container = document.getElementById('roll-keys');
+    container.innerHTML = '';
+    const numRows = ROLL_NOTES.length;
+    const totalH = numRows * ROW_H;
+
+    const inner = document.createElement('div');
+    inner.style.cssText = `position:relative;height:${totalH}px;width:68px;`;
+    container.appendChild(inner);
+
+    ROLL_NOTES.forEach((note, i) => {
+        const el = document.createElement('div');
+        el.className = 'roll-key-item ' + (note.isBlack ? 'black-roll' : 'white-roll') + (note.semitone === 0 ? ' c-key' : '');
+        el.style.cssText = `position:absolute;top:${i * ROW_H}px;left:0;right:0;height:${ROW_H}px;`;
+        el.innerHTML = `<span class="rk-name">${note.name}</span>`;
+        el.addEventListener('mousedown', () => previewNote(note.name));
+        el.addEventListener('mouseup',   () => stopPreviewNote(note.name));
+        el.addEventListener('mouseleave',() => stopPreviewNote(note.name));
+        inner.appendChild(el);
+    });
+
+    // Sync: roll-scroll vertical → roll-keys
+    const rollScroll = document.getElementById('roll-scroll');
+    rollScroll.addEventListener('scroll', () => {
+        container.scrollTop = rollScroll.scrollTop;
+        drawGrid();
+    });
+
+    // Scroll to middle (C4 area) on init
+    setTimeout(() => {
+        const c4idx = ROLL_NOTES.findIndex(n => n.name === 'C4');
+        if (c4idx >= 0) {
+            rollScroll.scrollTop = Math.max(0, c4idx * ROW_H - 200);
+        }
+    }, 50);
+}
+
+let _syncLock = false;
+
+// ── Section tabs ───────────────────────────────────────────────────────────────
+function buildSectionTabs() {
+    const row = document.getElementById('sections-row');
+    row.innerHTML = '';
+    sections.forEach((sec, i) => {
+        const wrap = document.createElement('span');
+        wrap.style.display = 'flex';
+        wrap.style.alignItems = 'center';
+
+        const tab = document.createElement('button');
+        tab.className = 'section-tab' + (i === activeSectionIdx ? ' active' : '');
+        tab.textContent = sec.name;
+        tab.onclick = () => { activeSectionIdx = i; buildSectionTabs(); renderRoll(); };
+
+        const del = document.createElement('button');
+        del.className = 'section-tab del-btn';
+        del.textContent = '×';
+        del.title = 'Delete section';
+        del.onclick = (e) => {
+            e.stopPropagation();
+            if (sections.length === 1) return;
+            sections.splice(i, 1);
+            if (activeSectionIdx >= sections.length) activeSectionIdx = sections.length - 1;
+            buildSectionTabs();
+            renderRoll();
+        };
+
+        wrap.appendChild(tab);
+        if (sections.length > 1) wrap.appendChild(del);
+        row.appendChild(wrap);
+    });
+
+    const addBtn = document.createElement('button');
+    addBtn.className = 'section-tab add-btn';
+    addBtn.textContent = '+ Add Section';
+    addBtn.onclick = () => {
+        sections.push(newSection());
+        activeSectionIdx = sections.length - 1;
+        buildSectionTabs();
+        renderRoll();
+    };
+    row.appendChild(addBtn);
+}
+
+// ── Bar sound chips (load synth presets into bar mode) ─────────────────────────
+function buildBarSoundChips() {
+    const wrap = document.getElementById('bar-sound-chips');
+    wrap.innerHTML = '';
+    const currentChip = document.createElement('button');
+    currentChip.className = 'bar-sound-chip active';
+    currentChip.textContent = 'Current Synth';
+    currentChip.dataset.preset = '__current__';
+    currentChip.onclick = () => {
+        barSoundPreset = null;
+        document.querySelectorAll('.bar-sound-chip').forEach(c => c.classList.remove('active'));
+        currentChip.classList.add('active');
+    };
+    wrap.appendChild(currentChip);
+
+    // Add built-in presets as quick picks
+    Object.keys(PRESETS).forEach(name => {
+        const chip = document.createElement('button');
+        chip.className = 'bar-sound-chip';
+        chip.textContent = name.charAt(0).toUpperCase() + name.slice(1);
+        chip.onclick = () => {
+            applyPreset(name);
+            barSoundPreset = captureCurrentState();
+            document.querySelectorAll('.bar-sound-chip').forEach(c => c.classList.remove('active'));
+            chip.classList.add('active');
+        };
+        wrap.appendChild(chip);
+    });
+}
+
+function refreshBarSoundChips() {
+    // Re-add user presets to the bar sound chip row
+    const wrap = document.getElementById('bar-sound-chips');
+    // Remove old user preset chips
+    wrap.querySelectorAll('[data-user-preset]').forEach(c => c.remove());
+    userPresets.forEach((preset, idx) => {
+        const chip = document.createElement('button');
+        chip.className = 'bar-sound-chip';
+        chip.textContent = '★ ' + preset.name;
+        chip.dataset.userPreset = idx;
+        chip.onclick = () => {
+            applyUserPreset(preset.state);
+            barSoundPreset = captureCurrentState();
+            document.querySelectorAll('.bar-sound-chip').forEach(c => c.classList.remove('active'));
+            chip.classList.add('active');
+        };
+        wrap.appendChild(chip);
+    });
+}
+
+// ── Render roll (draw grid + notes) ───────────────────────────────────────────
+function renderRoll() {
+    setupRollDimensions();
+    drawGrid();
+    rerenderNotes();
+}
+
+function setupRollDimensions() {
+    const totalRows = ROLL_NOTES.length;
+    const totalH = totalRows * ROW_H;
+    const totalW = rollWidth();
+
+    const wrap = document.getElementById('roll-canvas-wrap');
+    wrap.style.width  = totalW + 'px';
+    wrap.style.height = totalH + 'px';
+    wrap.style.minWidth = totalW + 'px';
+
+    const canvas = document.getElementById('roll-grid-canvas');
+    canvas.width  = totalW;
+    canvas.height = totalH;
+
+    const noteLayer = document.getElementById('roll-note-layer');
+    noteLayer.style.width  = totalW + 'px';
+    noteLayer.style.height = totalH + 'px';
+}
+
+function drawGrid() {
+    const canvas = document.getElementById('roll-grid-canvas');
+    const ctx = canvas.getContext('2d');
+    const W = canvas.width, H = canvas.height;
+    const cellW = beatCellW();
+    const totalBeats = barsPerSection * beatsNum;
+
+    ctx.clearRect(0, 0, W, H);
+
+    // Row backgrounds
+    ROLL_NOTES.forEach((note, i) => {
+        const y = i * ROW_H;
+        ctx.fillStyle = note.isBlack ? 'rgba(0,0,0,0.35)' : 'rgba(255,255,255,0.02)';
+        ctx.fillRect(0, y, W, ROW_H);
+        // C note row accent
+        if (note.semitone === 0) {
+            ctx.fillStyle = 'rgba(217,119,6,0.05)';
+            ctx.fillRect(0, y, W, ROW_H);
+        }
+    });
+
+    // Vertical beat / bar lines
+    for (let b = 0; b <= totalBeats; b++) {
+        const x = b * cellW;
+        const isBar = b % beatsNum === 0;
+        ctx.strokeStyle = isBar ? 'rgba(255,255,255,0.18)' : 'rgba(255,255,255,0.06)';
+        ctx.lineWidth = isBar ? 1.5 : 0.5;
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, H);
+        ctx.stroke();
+
+        // Bar number
+        if (isBar) {
+            const barNum = b / beatsNum + 1;
+            ctx.fillStyle = 'rgba(255,255,255,0.25)';
+            ctx.font = '9px Space Mono, monospace';
+            ctx.fillText(barNum, x + 3, 10);
+        }
+    }
+
+    // Horizontal row dividers
+    ROLL_NOTES.forEach((_, i) => {
+        if (i % 12 === 0) {
+            ctx.strokeStyle = 'rgba(217,119,6,0.15)';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(0, i * ROW_H);
+            ctx.lineTo(W, i * ROW_H);
+            ctx.stroke();
+        }
+    });
+}
+
+// ── Note rendering ─────────────────────────────────────────────────────────────
+function rerenderNotes() {
+    const layer = document.getElementById('roll-note-layer');
+    layer.innerHTML = '';
+    const sec = sections[activeSectionIdx];
+    if (!sec) return;
+    sec.notes.forEach((note, idx) => {
+        renderNoteEl(note, idx);
+    });
+    const ph = document.getElementById('roll-playhead');
+    layer.appendChild(ph);
+}
+
+function renderNoteEl(note, idx) {
+    const layer = document.getElementById('roll-note-layer');
+    const rowIdx = ROLL_NOTES.findIndex(r => r.name === note.noteName);
+    if (rowIdx < 0) return;
+
+    const cellW = beatCellW();
+    const x = note.beat * cellW;
+    const y = rowIdx * ROW_H;
+    const w = Math.max(4, note.duration * cellW);
+
+    const el = document.createElement('div');
+    el.className = 'roll-note';
+    el.style.left   = x + 'px';
+    el.style.top    = y + 'px';
+    el.style.width  = w + 'px';
+    el.style.height = ROW_H + 'px';
+    el.dataset.noteIdx = idx;
+
+    const label = document.createElement('div');
+    label.className = 'note-label';
+    label.textContent = note.noteName;
+    el.appendChild(label);
+
+    const resizeHandle = document.createElement('div');
+    resizeHandle.className = 'note-resize';
+    resizeHandle.addEventListener('mousedown', e => { e.stopPropagation(); startResizeNote(e, idx); });
+    el.appendChild(resizeHandle);
+
+    el.addEventListener('mousedown', e => {
+        if (rollTool === 'erase') { e.stopPropagation(); deleteNote(idx); return; }
+        if (rollTool === 'select') { e.stopPropagation(); return; }
+        // draw tool: start drag move
+        e.stopPropagation();
+        startMoveNote(e, idx);
+    });
+
+    layer.appendChild(el);
+}
+
+// ── Interaction ────────────────────────────────────────────────────────────────
+let dragState = null;
+
+function onRollMouseDown(e) {
+    if (rollTool === 'erase') return;
+    if (rollTool === 'select') return;
+    // draw tool — add note
+    const pos = rollPosFromEvent(e);
+    if (!pos) return;
+    const sec = sections[activeSectionIdx];
+
+    // Default note duration = 1 beat
+    const newNote = { noteName: pos.noteName, beat: pos.beat, duration: 1.0 };
+    sec.notes.push(newNote);
+    rerenderNotes();
+
+    // Allow dragging to resize
+    dragState = { type: 'new', noteIdx: sec.notes.length - 1, startX: e.clientX, origDuration: newNote.duration, origBeat: pos.beat };
+    previewNote(pos.noteName);
+}
+
+function onRollRightClick(e) {
+    const pos = rollPosFromEvent(e);
+    if (!pos) return;
+    // Delete note at position
+    const sec = sections[activeSectionIdx];
+    const cellW = beatCellW();
+    const rollScroll = document.getElementById('roll-scroll');
+    const scrollRect = rollScroll.getBoundingClientRect();
+    const ex = (e.clientX - scrollRect.left) + rollScroll.scrollLeft;
+    const ey = (e.clientY - scrollRect.top)  + rollScroll.scrollTop;
+    const noteIdx = sec.notes.findIndex(n => {
+        const rowIdx = ROLL_NOTES.findIndex(r => r.name === n.noteName);
+        const ny = rowIdx * ROW_H;
+        const nx = n.beat * cellW;
+        const nw = n.duration * cellW;
+        return ex >= nx && ex <= nx + nw && ey >= ny && ey <= ny + ROW_H;
+    });
+    if (noteIdx >= 0) { sec.notes.splice(noteIdx, 1); rerenderNotes(); }
+}
+
+function onRollMouseMove(e) {
+    if (!dragState) return;
+    const cellW = beatCellW();
+    const deltaX = e.clientX - dragState.startX;
+    const deltaBeat = deltaX / cellW;
+
+    const sec = sections[activeSectionIdx];
+    const note = sec.notes[dragState.noteIdx];
+    if (!note) return;
+
+    if (dragState.type === 'new' || dragState.type === 'resize') {
+        note.duration = Math.max(0.125, dragState.origDuration + deltaBeat);
+        note.duration = Math.round(note.duration * 8) / 8; // snap to 1/8 beat
+    } else if (dragState.type === 'move') {
+        const newBeat = Math.max(0, dragState.origBeat + deltaBeat);
+        note.beat = Math.round(newBeat * 8) / 8;
+        // Row change
+        const pos = rollPosFromEvent(e);
+        if (pos) note.noteName = pos.noteName;
+    }
+
+    rerenderNotes();
+}
+
+function onRollMouseUp(e) {
+    if (dragState) {
+        if (dragState.noteName) stopPreviewNote(dragState.noteName);
+        dragState = null;
+    }
+}
+
+function startResizeNote(e, idx) {
+    const sec = sections[activeSectionIdx];
+    const note = sec.notes[idx];
+    dragState = { type: 'resize', noteIdx: idx, startX: e.clientX, origDuration: note.duration };
+}
+
+function startMoveNote(e, idx) {
+    const sec = sections[activeSectionIdx];
+    const note = sec.notes[idx];
+    dragState = { type: 'move', noteIdx: idx, startX: e.clientX, origBeat: note.beat, noteName: note.noteName };
+}
+
+function deleteNote(idx) {
+    const sec = sections[activeSectionIdx];
+    sec.notes.splice(idx, 1);
+    rerenderNotes();
+}
+
+function rollPosFromEvent(e) {
+    const rollScroll = document.getElementById('roll-scroll');
+    const scrollRect = rollScroll.getBoundingClientRect();
+    const rawY = (e.clientY - scrollRect.top) + rollScroll.scrollTop;
+    const rawX = (e.clientX - scrollRect.left) + rollScroll.scrollLeft - 0; // note layer starts at 0 in scroll
+
+    const rowIdx = Math.floor(rawY / ROW_H);
+    if (rowIdx < 0 || rowIdx >= ROLL_NOTES.length) return null;
+    const cellW = beatCellW();
+    const beat = rawX / cellW;
+    const snapBeat = Math.max(0, Math.round(beat * 4) / 4);
+    return { noteName: ROLL_NOTES[rowIdx].name, beat: snapBeat, rowIdx };
+}
+
+// ── Transport ──────────────────────────────────────────────────────────────────
+function barTransportPlay() {
+    if (isPlaying) {
+        stopPlayback();
+    } else {
+        startPlayback();
+    }
+}
+
+function barTransportRestart() {
+    stopPlayback();
+    playPosition = 0;
+    updatePlayhead();
+}
+
+function startPlayback() {
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    isPlaying = true;
+    playStartTime = audioCtx.currentTime - playPosition;
+    lookaheadScheduled = playPosition;
+    scheduledNotes = [];
+    document.getElementById('btn-play').textContent = '⏸';
+    document.getElementById('btn-play').classList.add('play-active');
+    document.getElementById('roll-playhead').classList.add('visible');
+    scheduleLoop();
+    rafId = requestAnimationFrame(animatePlayhead);
+}
+
+function stopPlayback() {
+    isPlaying = false;
+    cancelAnimationFrame(rafId);
+    // Cancel any scheduled notes that haven't sounded yet
+    scheduledNotes.forEach(sn => { try { sn.stop(); } catch(e){} });
+    scheduledNotes = [];
+    document.getElementById('btn-play').textContent = '▶';
+    document.getElementById('btn-play').classList.remove('play-active');
+    document.getElementById('roll-playhead').classList.remove('visible');
+}
+
+const SCHEDULE_AHEAD = 0.15; // seconds to schedule ahead
+
+function scheduleLoop() {
+    if (!isPlaying) return;
+    const now = audioCtx.currentTime;
+    const elapsed = now - playStartTime;
+    const secDur = sectionDuration();
+    const secElapsed = elapsed % secDur;
+    const windowEnd = secElapsed + SCHEDULE_AHEAD;
+
+    const sec = sections[activeSectionIdx];
+    if (!sec) { setTimeout(scheduleLoop, 25); return; }
+
+    sec.notes.forEach(note => {
+        const noteTimeInSec = note.beat * (60 / bpm);
+        const durSec = note.duration * (60 / bpm);
+        // Which loop iteration are we in?
+        const loopNum = Math.floor(elapsed / secDur);
+        const absNoteTime = playStartTime + loopNum * secDur + noteTimeInSec;
+        if (absNoteTime >= now && absNoteTime < now + SCHEDULE_AHEAD) {
+            // Check not already scheduled
+            const key = loopNum + '_' + note.beat + '_' + note.noteName;
+            if (!scheduledNotes.find(s => s.key === key)) {
+                const freq = NOTE_FREQS[note.noteName];
+                if (freq) {
+                    const stopper = scheduleBarNote(freq, absNoteTime, durSec);
+                    scheduledNotes.push({ key, stop: stopper, time: absNoteTime });
+                }
+            }
+        }
+    });
+
+    // Clean old entries
+    scheduledNotes = scheduledNotes.filter(s => s.time > now - 1);
+
+    setTimeout(scheduleLoop, 25);
+}
+
+function scheduleBarNote(freq, startTime, duration) {
+    const numVoices = params.voices;
+    const spread    = params.spread;
+    const chorusDep = params.chorus;
+    const gainNode  = audioCtx.createGain();
+    gainNode.gain.setValueAtTime(0, startTime);
+    gainNode.gain.linearRampToValueAtTime(0.8 / numVoices, startTime + Math.min(params.attack, duration * 0.3));
+    const releaseStart = startTime + duration - Math.min(params.release, duration * 0.5);
+    gainNode.gain.setValueAtTime(0.8 / numVoices, releaseStart);
+    gainNode.gain.linearRampToValueAtTime(0, releaseStart + Math.min(params.release, duration * 0.5));
+    gainNode.connect(distInput);
+
+    const voices = [];
+    for (let i = 0; i < numVoices; i++) {
+        const detune = numVoices > 1 ? (i / (numVoices - 1) - 0.5) * spread * 2 : 0;
+        const v = makeSingleVoice(currentWaveform, freq, detune, chorusDep, i, gainNode);
+        if (v) voices.push(v);
+    }
+
+    const stopTime = startTime + duration + params.release + 0.05;
+    voices.forEach(v => v.stop(stopTime));
+
+    return () => {
+        gainNode.gain.cancelScheduledValues(audioCtx.currentTime);
+        gainNode.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.05);
+        voices.forEach(v => { try { v.stop(audioCtx.currentTime + 0.05); } catch(e){} });
+    };
+}
+
+function animatePlayhead() {
+    if (!isPlaying) return;
+    const now = audioCtx.currentTime;
+    const elapsed = now - playStartTime;
+    const secDur = sectionDuration();
+    const secElapsed = elapsed % secDur;
+
+    updatePlayheadPosition(secElapsed / secDur);
+    updateMeterDisplay(secElapsed);
+
+    rafId = requestAnimationFrame(animatePlayhead);
+}
+
+function updatePlayheadPosition(fraction) {
+    const ph = document.getElementById('roll-playhead');
+    const totalW = rollWidth();
+    ph.style.left = (fraction * totalW) + 'px';
+}
+
+function updatePlayhead() {
+    const ph = document.getElementById('roll-playhead');
+    ph.style.left = '0px';
+    document.getElementById('playhead-display').textContent = '1 : 1';
+}
+
+function updateMeterDisplay(secElapsed) {
+    const secPerBeat = 60 / bpm;
+    const totalBeat = secElapsed / secPerBeat;
+    const bar  = Math.floor(totalBeat / beatsNum) + 1;
+    const beat = Math.floor(totalBeat % beatsNum) + 1;
+    document.getElementById('playhead-display').textContent = bar + ' : ' + beat;
+}
+
+// ── Note preview from key sidebar ──────────────────────────────────────────────
+const previewActive = {};
+
+function previewNote(noteName) {
+    if (previewActive[noteName]) return;
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    const freq = NOTE_FREQS[noteName];
+    if (!freq) return;
+    const gainNode = audioCtx.createGain();
+    gainNode.gain.setValueAtTime(0, audioCtx.currentTime);
+    gainNode.gain.linearRampToValueAtTime(0.5 / params.voices, audioCtx.currentTime + params.attack);
+    gainNode.connect(distInput);
+    const voices = [];
+    for (let i = 0; i < params.voices; i++) {
+        const detune = params.voices > 1 ? (i / (params.voices - 1) - 0.5) * params.spread * 2 : 0;
+        const v = makeSingleVoice(currentWaveform, freq, detune, params.chorus, i, gainNode);
+        if (v) voices.push(v);
+    }
+    previewActive[noteName] = { voices, gainNode };
+}
+
+function stopPreviewNote(noteName) {
+    const n = previewActive[noteName];
+    if (!n) return;
+    const now = audioCtx.currentTime;
+    n.gainNode.gain.setValueAtTime(n.gainNode.gain.value, now);
+    n.gainNode.gain.linearRampToValueAtTime(0, now + params.release);
+    n.voices.forEach(v => v.stop(now + params.release + 0.01));
+    delete previewActive[noteName];
+}
+
+// ── Tools / Zoom ───────────────────────────────────────────────────────────────
+function setRollTool(tool) {
+    rollTool = tool;
+    ['draw','erase','select'].forEach(t => {
+        const btn = document.getElementById('tool-' + t);
+        if (btn) btn.classList.toggle('active', t === tool);
+    });
+    const layer = document.getElementById('roll-note-layer');
+    if (layer) layer.style.cursor = tool === 'erase' ? 'not-allowed' : tool === 'select' ? 'default' : 'crosshair';
+}
+
+function adjustZoom(delta) {
+    rollZoom = Math.max(0.25, Math.min(4, rollZoom + delta));
+    renderRoll();
+}
+
+// ── BPM / Meter / Bar changes ──────────────────────────────────────────────────
+function onBpmChange() {
+    const v = parseInt(document.getElementById('bpm-input').value) || 120;
+    bpm = Math.max(20, Math.min(300, v));
+    if (isPlaying) { stopPlayback(); startPlayback(); }
+}
+
+function onMeterChange() {
+    beatsNum   = parseInt(document.getElementById('beats-num').value)   || 4;
+    beatsDenom = parseInt(document.getElementById('beats-denom').value) || 4;
+    beatsNum   = Math.max(1, Math.min(16, beatsNum));
+    beatsDenom = Math.max(1, Math.min(16, beatsDenom));
+    renderRoll();
+    if (isPlaying) { stopPlayback(); startPlayback(); }
+}
+
+function onBarsChange() {
+    barsPerSection = parseInt(document.getElementById('bars-per-section').value) || 2;
+    barsPerSection = Math.max(1, Math.min(32, barsPerSection));
+    renderRoll();
+    if (isPlaying) { stopPlayback(); startPlayback(); }
+}
+
+function clearAllNotes() {
+    const sec = sections[activeSectionIdx];
+    if (!sec) return;
+    sec.notes = [];
+    rerenderNotes();
+}
+
+// ── Bar Presets ────────────────────────────────────────────────────────────────
+const BAR_PRESETS_KEY = 'unison_synth_bar_presets';
+let barPresets = [];
+
+function loadBarPresets() {
+    try {
+        const raw = localStorage.getItem(BAR_PRESETS_KEY);
+        barPresets = raw ? JSON.parse(raw) : [];
+    } catch(e) { barPresets = []; }
+}
+
+function saveBarPresetsToStorage() {
+    try { localStorage.setItem(BAR_PRESETS_KEY, JSON.stringify(barPresets)); } catch(e) {}
+}
+
+function captureBarState() {
+    return {
+        sections: JSON.parse(JSON.stringify(sections)),
+        bpm, beatsNum, beatsDenom, barsPerSection,
+        soundState: captureCurrentState(),
+    };
+}
+
+function applyBarPreset(state) {
+    sections = JSON.parse(JSON.stringify(state.sections));
+    bpm = state.bpm || 120;
+    beatsNum = state.beatsNum || 4;
+    beatsDenom = state.beatsDenom || 4;
+    barsPerSection = state.barsPerSection || 2;
+
+    document.getElementById('bpm-input').value = bpm;
+    document.getElementById('beats-num').value = beatsNum;
+    document.getElementById('beats-denom').value = beatsDenom;
+    document.getElementById('bars-per-section').value = barsPerSection;
+
+    if (state.soundState) applyUserPreset(state.soundState);
+    activeSectionIdx = 0;
+    buildSectionTabs();
+    renderRoll();
+}
+
+function saveBarPreset() {
+    const nameInput = document.getElementById('bar-preset-name-input');
+    const name = nameInput.value.trim() || ('Pattern ' + (barPresets.length + 1));
+    barPresets.push({ name, state: captureBarState() });
+    saveBarPresetsToStorage();
+    renderBarPresets();
+    nameInput.value = '';
+}
+
+function renderBarPresets() {
+    const grid = document.getElementById('bar-presets-grid');
+    const hint = document.getElementById('no-bar-presets-hint');
+    grid.innerHTML = '';
+    if (barPresets.length === 0) {
+        hint.style.display = '';
+        grid.appendChild(hint);
+        return;
+    }
+    barPresets.forEach((preset, idx) => {
+        const chip = document.createElement('div');
+        chip.className = 'user-preset-chip';
+
+        const loadBtn = document.createElement('button');
+        loadBtn.className = 'chip-load';
+        loadBtn.textContent = preset.name;
+        loadBtn.addEventListener('click', () => {
+            applyBarPreset(preset.state);
+        });
+
+        const delBtn = document.createElement('button');
+        delBtn.className = 'chip-delete';
+        delBtn.textContent = '×';
+        delBtn.addEventListener('click', e => {
+            e.stopPropagation();
+            barPresets.splice(idx, 1);
+            saveBarPresetsToStorage();
+            renderBarPresets();
+        });
+
+        chip.appendChild(loadBtn);
+        chip.appendChild(delBtn);
+        grid.appendChild(chip);
+    });
+}
+
+document.getElementById('bar-preset-name-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter') saveBarPreset();
+});
+
+
+loadBarPresets();
+renderBarPresets();
+
+// Hook into existing user preset save to refresh bar sound chips
+const _origSaveBtnListener = document.getElementById('btn-save-preset');
+_origSaveBtnListener.addEventListener('click', () => {
+    setTimeout(refreshBarSoundChips, 100);
+});
 
 // ─────────────────────────────────────────────────────────────────────────────
 
