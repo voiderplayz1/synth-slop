@@ -404,11 +404,41 @@ input[type="range"]:active::-webkit-slider-thumb {
     background: var(--accent-hover);
 }
 
+/* ── Import / Export row ── */
+.io-row {
+    display: flex;
+    gap: 6px;
+    padding-top: 10px;
+    border-top: 1px solid var(--border-light);
+}
+
+.btn-io {
+    flex: 1;
+    background: var(--bg-module);
+    color: var(--text-main);
+    border: 1px solid var(--border-dark);
+    border-radius: var(--radius-sm);
+    padding: 7px 8px;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+    cursor: pointer;
+    transition: all 0.15s;
+    text-align: center;
+}
+
+.btn-io:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+    box-shadow: 0 2px 8px var(--accent-glow);
+}
+
 .user-presets-grid {
     display: flex;
     flex-direction: column;
     gap: 6px;
-    max-height: calc(100vh - 280px);
+    max-height: calc(100vh - 340px);
     overflow-y: auto;
     overflow-x: hidden;
 }
@@ -549,7 +579,7 @@ input[type="range"]:active::-webkit-slider-thumb {
                     <button class="sel-btn" data-wave="hypersaw">Hyper Saw</button>
                     <button class="sel-btn" data-wave="glassbell">Glass Bell</button>
                     <button class="sel-btn" data-wave="theremin">Theremin</button>
-                    <button class="sel-btn" data-wave="laser">Laser</button>
+                    <button class="sel-btn" data-wave="violin">Violin</button>
                 </div>
             </div>
 
@@ -560,7 +590,7 @@ input[type="range"]:active::-webkit-slider-thumb {
                 </div>
                 <div class="ctrl">
                     <div class="ctrl-label"><span>Spread</span><span id="val-spread">2.5</span></div>
-                    <input type="range" id="sl-spread" min="0" max="50" step="0.5" value="2.5">
+                    <input type="range" id="sl-spread" min="0" max="100" step="0.5" value="2.5">
                 </div>
                 <div class="ctrl">
                     <div class="ctrl-label"><span>Volume</span><span id="val-volume">0.15</span></div>
@@ -653,6 +683,10 @@ input[type="range"]:active::-webkit-slider-thumb {
                     <div class="ctrl-label"><span>Bass Boost</span><span id="val-bassboost">0</span></div>
                     <input type="range" id="sl-bassboost" min="0" max="24" step="0.5" value="0">
                 </div>
+                <div class="ctrl">
+                    <div class="ctrl-label"><span>Atmosphere</span><span id="val-atmos">0.00</span></div>
+                    <input type="range" id="sl-atmos" min="0" max="1" step="0.01" value="0">
+                </div>
             </div>
         </div>
     </div>
@@ -685,6 +719,11 @@ input[type="range"]:active::-webkit-slider-thumb {
         <div class="save-preset-row">
             <input type="text" id="preset-name-input" placeholder="Name this sound…" maxlength="40" autocomplete="off" spellcheck="false">
             <button class="btn-save-preset" id="btn-save-preset">Save Current</button>
+        </div>
+        <div class="io-row">
+            <button class="btn-io" id="btn-export">Export</button>
+            <button class="btn-io" id="btn-import">Import</button>
+            <input type="file" id="import-file-input" accept=".json,application/json" style="display:none;">
         </div>
         <div class="user-presets-grid" id="user-presets-grid">
             <span class="no-presets-hint" id="no-presets-hint">No saved presets yet, just save sm idk</span>
@@ -771,6 +810,39 @@ bassBoostEQ.type = 'lowshelf';
 bassBoostEQ.frequency.value = 120;
 bassBoostEQ.gain.value = 0;
 
+// ── Atmosphere: wide stereo spatial "room" à la fixed Spatial Audio ──
+// Long dense convolution + Haas-style widening on a parallel wet bus.
+const atmosInput   = audioCtx.createGain();
+const atmosConv    = audioCtx.createConvolver();
+const atmosWet     = audioCtx.createGain();
+const atmosSplit   = audioCtx.createChannelSplitter(2);
+const atmosMerge   = audioCtx.createChannelMerger(2);
+const atmosDelayL  = audioCtx.createDelay(0.05);
+const atmosDelayR  = audioCtx.createDelay(0.05);
+const atmosHighcut = audioCtx.createBiquadFilter();
+atmosWet.gain.value = 0;
+atmosDelayL.delayTime.value = 0.012;
+atmosDelayR.delayTime.value = 0.020;
+atmosHighcut.type = 'highpass';
+atmosHighcut.frequency.value = 180;
+
+function makeAtmosIR() {
+    const sr = audioCtx.sampleRate;
+    const dur = 3.8;
+    const len = sr * dur;
+    const buf = audioCtx.createBuffer(2, len, sr);
+    for (let c = 0; c < 2; c++) {
+        const d = buf.getChannelData(c);
+        for (let i = 0; i < len; i++) {
+            const env = Math.pow(1 - i / len, 2.6);
+            // slight decorrelation between channels for width
+            d[i] = (Math.random() * 2 - 1) * env * (c === 0 ? 1 : 0.92);
+        }
+    }
+    atmosConv.buffer = buf;
+}
+makeAtmosIR();
+
 let bitDepth = 16;
 
 distInput.connect(distNode);
@@ -783,6 +855,7 @@ filter.connect(dryGain);
 filter.connect(convolver);
 filter.connect(delayNode);
 filter.connect(flangerDelay);
+filter.connect(atmosInput);
 
 convolver.connect(reverbGain);
 
@@ -797,10 +870,21 @@ flangerFeedback.connect(flangerDelay);
 flangerDelay.connect(flangerMix);
 flangerLFO.start();
 
+// Atmosphere routing: input -> conv -> highcut -> split -> per-channel delay -> merge -> wet
+atmosInput.connect(atmosConv);
+atmosConv.connect(atmosHighcut);
+atmosHighcut.connect(atmosSplit);
+atmosSplit.connect(atmosDelayL, 0);
+atmosSplit.connect(atmosDelayR, 1);
+atmosDelayL.connect(atmosMerge, 0, 0);
+atmosDelayR.connect(atmosMerge, 0, 1);
+atmosMerge.connect(atmosWet);
+
 dryGain.connect(masterGain);
 reverbGain.connect(masterGain);
 delayMix.connect(masterGain);
 flangerMix.connect(masterGain);
+atmosWet.connect(masterGain);
 
 masterGain.connect(bassBoostEQ);
 bassBoostEQ.connect(analyser);
@@ -829,6 +913,7 @@ const params = {
     crush:     16,
     flanger:   0,
     bassboost: 0,
+    atmos:     0,
 };
 
 const HARMONY_INTERVALS = {
@@ -881,6 +966,7 @@ function applyAudioParams() {
     flangerLFO.frequency.setTargetAtTime(params.flanger, t, 0.05);
     flangerMix.gain.setTargetAtTime(params.flanger > 0 ? 0.45 : 0, t, 0.1);
     bassBoostEQ.gain.setTargetAtTime(params.bassboost, t, 0.05);
+    atmosWet.gain.setTargetAtTime(params.atmos * 0.9, t, 0.05);
 }
 
 function fmt(v, decimals = 2) {
@@ -906,6 +992,7 @@ const sliders = [
     { id:'sl-crush',          key:'crush',             label:'val-crush',          parse:parseFloat, cb: v => { bitDepth = v; } },
     { id:'sl-flanger',        key:'flanger',           label:'val-flanger',        parse:parseFloat, cb: v => { flangerLFO.frequency.setTargetAtTime(v, audioCtx.currentTime, 0.05); flangerMix.gain.setTargetAtTime(v > 0 ? 0.45 : 0, audioCtx.currentTime, 0.1); } },
     { id:'sl-bassboost',      key:'bassboost',         label:'val-bassboost',      parse:parseFloat, cb: v => { bassBoostEQ.gain.setTargetAtTime(v, audioCtx.currentTime, 0.05); } },
+    { id:'sl-atmos',          key:'atmos',             label:'val-atmos',          parse:parseFloat, cb: v => { atmosWet.gain.setTargetAtTime(v * 0.9, audioCtx.currentTime, 0.05); } },
     { id:'sl-harmony-voices', key:'_harmonyVoices',    label:'val-harmony-voices', parse:parseInt,   cb: v => { harmonyVoices = v; } },
     { id:'sl-harmony-vol',    key:'_harmonyVol',       label:'val-harmony-vol',    parse:parseFloat, cb: v => { harmonyVol = v; } },
 ];
@@ -1173,23 +1260,82 @@ function makeSingleVoice(waveform, freq, detuneVal, chorusDepth, voiceIdx, gainN
         return { stop: t => { osc.stop(t); shimmer.stop(t); vibratoLFO.stop(t); } };
     }
 
-    if (waveform === 'laser') {
-        // Pitch-swept square with rapid frequency drop and ring mod buzz
-        const osc = audioCtx.createOscillator();
-        const ringCarrier = audioCtx.createOscillator();
-        const ringGain = audioCtx.createGain();
-        osc.type = 'square';
-        ringCarrier.type = 'sine';
-        ringCarrier.frequency.value = 440;
-        ringGain.gain.value = 0.3;
-        osc.detune.value = detuneVal;
-        osc.frequency.setValueAtTime(freq * 4, audioCtx.currentTime);
-        osc.frequency.exponentialRampToValueAtTime(freq, audioCtx.currentTime + 0.12);
-        ringCarrier.connect(ringGain);
-        ringGain.connect(gainNode);
-        osc.connect(gainNode);
-        osc.start(); ringCarrier.start();
-        return { stop: t => { osc.stop(t); ringCarrier.stop(t); } };
+    if (waveform === 'violin') {
+        // Ultra-realistic bowed violin:
+        //  • sawtooth core (rich odd+even harmonics of a bowed string)
+        //  • formant band-pass "body" resonance around 300–3000 Hz
+        //  • delayed expressive vibrato that eases in (bow settling)
+        //  • bow-noise breath layer, filtered, for realistic scrape
+        //  • slow amplitude swell (bow attack) instead of instant onset
+        const now  = audioCtx.currentTime;
+        const osc  = audioCtx.createOscillator();
+        const osc2 = audioCtx.createOscillator();   // slight fifth-partial reinforcement
+        osc.type   = 'sawtooth';
+        osc2.type  = 'sawtooth';
+        osc.frequency.value  = freq;
+        osc2.frequency.value = freq;
+        osc.detune.value  = detuneVal - 3;
+        osc2.detune.value = detuneVal + 3;
+
+        // Body formant resonance (violin's characteristic wooden timbre)
+        const body = audioCtx.createBiquadFilter();
+        body.type = 'bandpass';
+        body.frequency.value = 1400;
+        body.Q.value = 0.7;
+        const bodyGain = audioCtx.createGain();
+        bodyGain.gain.value = 1.0;
+
+        // A parallel brightness path so it doesn't get muddy
+        const bright = audioCtx.createBiquadFilter();
+        bright.type = 'highshelf';
+        bright.frequency.value = 2500;
+        bright.gain.value = 4;
+
+        // Expressive vibrato that eases in after the bow settles (~0.25s)
+        const vib   = audioCtx.createOscillator();
+        const vibG  = audioCtx.createGain();
+        vib.type = 'sine';
+        vib.frequency.value = 5.2 + voiceIdx * 0.2;
+        vibG.gain.setValueAtTime(0, now);
+        vibG.gain.linearRampToValueAtTime(0, now + 0.22);
+        vibG.gain.linearRampToValueAtTime(7 + voiceIdx, now + 0.9);
+        vib.connect(vibG);
+        vibG.connect(osc.detune);
+        vibG.connect(osc2.detune);
+
+        // Bow noise (breathy scrape), gated low so it's just texture
+        const bowNoise = makeNoise();
+        const bowFilt  = audioCtx.createBiquadFilter();
+        bowFilt.type = 'bandpass';
+        bowFilt.frequency.value = freq * 2;
+        bowFilt.Q.value = 1.2;
+        const bowGain = audioCtx.createGain();
+        bowGain.gain.setValueAtTime(0.06, now);
+        bowGain.gain.exponentialRampToValueAtTime(0.012, now + 0.4);
+
+        // Bow-attack swell: soft onset, not a click
+        const swell = audioCtx.createGain();
+        swell.gain.setValueAtTime(0.0001, now);
+        swell.gain.exponentialRampToValueAtTime(1.0, now + 0.14);
+
+        osc.connect(body);
+        osc2.connect(body);
+        body.connect(bodyGain);
+        bodyGain.connect(bright);
+        bright.connect(swell);
+
+        bowNoise.connect(bowFilt);
+        bowFilt.connect(bowGain);
+        bowGain.connect(swell);
+
+        swell.connect(gainNode);
+
+        osc.start(); osc2.start(); vib.start(); bowNoise.start();
+        return { stop: t => {
+            // gentle bow-off tail
+            try { swell.gain.setTargetAtTime(0.0001, t - 0.05, 0.08); } catch(e) {}
+            osc.stop(t); osc2.stop(t); vib.stop(t); bowNoise.stop(t);
+        } };
     }
 
     if (waveform === 'pwm') {
@@ -1258,7 +1404,7 @@ function triggerNote(keyChar) {
     if (harmonyMode !== 'off') {
         const intervals = HARMONY_INTERVALS[harmonyMode] || [];
         const numH = Math.min(harmonyVoices, intervals.length);
-        const hWave = (currentWaveform === 'frog' || currentWaveform === 'hypersaw' || currentWaveform === 'glassbell' || currentWaveform === 'theremin' || currentWaveform === 'laser' || currentWaveform === 'noise' || currentWaveform === 'pwm') ? 'sine' : currentWaveform;
+        const hWave = (currentWaveform === 'frog' || currentWaveform === 'hypersaw' || currentWaveform === 'glassbell' || currentWaveform === 'theremin' || currentWaveform === 'violin' || currentWaveform === 'noise' || currentWaveform === 'pwm') ? 'sine' : currentWaveform;
         for (let hi = 0; hi < numH; hi++) {
             const hFreq  = baseFreq * Math.pow(2, intervals[hi] / 12);
             const hGain  = audioCtx.createGain();
@@ -1381,7 +1527,7 @@ function applyUserPreset(state) {
         voices:'sl-voices', spread:'sl-spread', attack:'sl-attack', release:'sl-release',
         reverb:'sl-reverb', delay:'sl-delay', delaytime:'sl-delaytime', chorus:'sl-chorus',
         filter:'sl-filter', res:'sl-res', volume:'sl-volume', dist:'sl-dist',
-        crush:'sl-crush', flanger:'sl-flanger', bassboost:'sl-bassboost'
+        crush:'sl-crush', flanger:'sl-flanger', bassboost:'sl-bassboost', atmos:'sl-atmos'
     };
     for (const [k, id] of Object.entries(map)) {
         const el = document.getElementById(id);
@@ -1465,6 +1611,63 @@ document.getElementById('preset-row').addEventListener('click', () => {
     activeUserPresetIndex = null;
     // re-render after a tick so applyPreset runs first
     setTimeout(renderUserPresets, 0);
+});
+
+// ── Export / Import ─────────────────────────────────────────────────────────
+
+document.getElementById('btn-export').addEventListener('click', () => {
+    const payload = {
+        format:      'unison-synth-preset-bundle',
+        version:     1,
+        exportedAt:  new Date().toISOString(),
+        current:     captureCurrentState(),
+        userPresets: userPresets,
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
+    a.href = url;
+    a.download = 'unison-synth-' + stamp + '.json';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+});
+
+const importInput = document.getElementById('import-file-input');
+document.getElementById('btn-import').addEventListener('click', () => importInput.click());
+
+importInput.addEventListener('change', e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+        try {
+            const data = JSON.parse(ev.target.result);
+
+            // Accept either a full bundle or a bare state object
+            if (Array.isArray(data.userPresets)) {
+                // Merge imported presets in (append)
+                data.userPresets.forEach(p => {
+                    if (p && p.name && p.state) userPresets.push(p);
+                });
+                saveUserPresetsToStorage();
+            }
+
+            const stateToApply = data.current || (data.wave ? data : null);
+            if (stateToApply && stateToApply.params) {
+                applyUserPreset(stateToApply);
+                activeUserPresetIndex = null;
+            }
+
+            renderUserPresets();
+        } catch(err) {
+            alert('Could not import that file — it doesn\'t look like a valid Unison Synth export.');
+        }
+        importInput.value = '';
+    };
+    reader.readAsText(file);
 });
 
 loadUserPresetsFromStorage();
