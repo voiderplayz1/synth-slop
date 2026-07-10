@@ -334,6 +334,57 @@ input[type="range"]:active::-webkit-slider-thumb {
     right: 20px;
     width: 210px;
     z-index: 100;
+    transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Slid off-screen (mobile) */
+.user-presets-sidebar.collapsed {
+    transform: translateX(calc(100% + 24px));
+}
+
+/* Floating tab to bring the panel back — hidden on desktop */
+.presets-toggle {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 101;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.18);
+    cursor: pointer;
+    font-size: 1.1rem;
+    line-height: 1;
+    transition: background 0.15s, transform 0.15s;
+}
+.presets-toggle:active { transform: scale(0.92); }
+.presets-toggle:hover { background: var(--accent-hover); }
+
+/* In-panel close button — hidden on desktop */
+.presets-close {
+    display: none;
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-size: 1.2rem;
+    line-height: 1;
+    cursor: pointer;
+    padding: 0 2px;
+    margin-left: auto;
+}
+.presets-close:hover { color: var(--accent); }
+
+/* ── Mobile ── */
+body.is-mobile .presets-toggle { display: flex; }
+body.is-mobile .presets-close  { display: block; }
+body.is-mobile .user-presets-sidebar {
+    width: min(260px, 82vw);
 }
 
 .user-presets-panel {
@@ -355,6 +406,8 @@ input[type="range"]:active::-webkit-slider-thumb {
     color: var(--text-muted);
     padding-bottom: 10px;
     border-bottom: 1px solid var(--border-light);
+    display: flex;
+    align-items: center;
 }
 
 .save-preset-row {
@@ -579,7 +632,7 @@ input[type="range"]:active::-webkit-slider-thumb {
                     <button class="sel-btn" data-wave="hypersaw">Hyper Saw</button>
                     <button class="sel-btn" data-wave="glassbell">Glass Bell</button>
                     <button class="sel-btn" data-wave="theremin">Theremin</button>
-                    <button class="sel-btn" data-wave="violin">Violin</button>
+                    <button class="sel-btn" data-wave="violin">Vibrat-o-lin</button>
                 </div>
             </div>
 
@@ -713,9 +766,11 @@ input[type="range"]:active::-webkit-slider-thumb {
 </div>
 </div><!-- /.main-col -->
 
-<div class="user-presets-sidebar">
+<button class="presets-toggle" id="presets-toggle" title="Presets" aria-label="Show presets">☰</button>
+
+<div class="user-presets-sidebar" id="presets-sidebar">
     <div class="user-presets-panel">
-        <div class="user-presets-title">My Presets</div>
+        <div class="user-presets-title">My Presets<button class="presets-close" id="presets-close" title="Hide" aria-label="Hide presets">×</button></div>
         <div class="save-preset-row">
             <input type="text" id="preset-name-input" placeholder="Name this sound…" maxlength="40" autocomplete="off" spellcheck="false">
             <button class="btn-save-preset" id="btn-save-preset">Save Current</button>
@@ -805,6 +860,13 @@ flangerLFOGain.gain.value    = 0.003;
 const analyser = audioCtx.createAnalyser();
 analyser.fftSize = 256;
 
+// High-pass to kill DC offset / sub-rumble that the boost would otherwise
+// amplify into an audible low hum when nothing is playing.
+const rumbleCut = audioCtx.createBiquadFilter();
+rumbleCut.type = 'highpass';
+rumbleCut.frequency.value = 28;
+rumbleCut.Q.value = 0.707;
+
 const bassBoostEQ = audioCtx.createBiquadFilter();
 bassBoostEQ.type = 'lowshelf';
 bassBoostEQ.frequency.value = 120;
@@ -886,7 +948,8 @@ delayMix.connect(masterGain);
 flangerMix.connect(masterGain);
 atmosWet.connect(masterGain);
 
-masterGain.connect(bassBoostEQ);
+masterGain.connect(rumbleCut);
+rumbleCut.connect(bassBoostEQ);
 bassBoostEQ.connect(analyser);
 analyser.connect(audioCtx.destination);
 
@@ -1672,6 +1735,40 @@ importInput.addEventListener('change', e => {
 
 loadUserPresetsFromStorage();
 renderUserPresets();
+
+// ── Mobile detection + collapsible presets panel ────────────────────────────
+
+function detectMobile() {
+    const uaMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    const coarse   = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
+    const narrow   = window.innerWidth <= 820;
+    return uaMobile || (coarse && narrow);
+}
+
+const sidebar     = document.getElementById('presets-sidebar');
+const toggleBtn   = document.getElementById('presets-toggle');
+const closeBtn    = document.getElementById('presets-close');
+
+let wasMobile = null;
+
+function applyMobileState() {
+    const mobile = detectMobile();
+    if (mobile === wasMobile) return; // avoid re-forcing state on every resize/viewport jiggle
+    wasMobile = mobile;
+
+    if (mobile) {
+        document.body.classList.add('is-mobile');
+        sidebar.classList.add('collapsed'); // start collapsed the first time we detect mobile
+    } else {
+        document.body.classList.remove('is-mobile');
+        sidebar.classList.remove('collapsed');
+    }
+}
+applyMobileState();
+window.addEventListener('resize', applyMobileState);
+
+toggleBtn.addEventListener('click', e => { e.stopPropagation(); sidebar.classList.remove('collapsed'); });
+closeBtn.addEventListener('click',  e => { e.stopPropagation(); sidebar.classList.add('collapsed'); });
 
 // ─────────────────────────────────────────────────────────────────────────────
 
