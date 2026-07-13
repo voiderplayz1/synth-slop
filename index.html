@@ -469,6 +469,62 @@ body.is-mobile .user-presets-sidebar {
     border-top: 1px solid var(--border-light);
 }
 
+/* ── Record row ── */
+.record-row {
+    display: flex;
+    padding-top: 10px;
+    border-top: 1px solid var(--border-light);
+}
+
+.btn-record {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    background: var(--bg-module);
+    color: var(--text-main);
+    border: 1px solid var(--border-dark);
+    border-radius: var(--radius-sm);
+    padding: 8px 14px;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.btn-record:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+    box-shadow: 0 2px 8px var(--accent-glow);
+}
+
+.btn-record .record-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #ef4444;
+    flex-shrink: 0;
+}
+
+.btn-record.recording {
+    border-color: #ef4444;
+    color: #ef4444;
+    background: rgba(239, 68, 68, 0.06);
+    box-shadow: 0 2px 8px rgba(239, 68, 68, 0.15);
+}
+
+.btn-record.recording .record-dot {
+    animation: record-pulse 1s ease-in-out infinite;
+}
+
+@keyframes record-pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.5); }
+    50% { box-shadow: 0 0 0 5px rgba(239, 68, 68, 0); }
+}
+
 .btn-io {
     flex: 1;
     background: var(--bg-module);
@@ -774,7 +830,7 @@ body.is-mobile .user-presets-sidebar {
 
 <div class="user-presets-sidebar" id="presets-sidebar">
     <div class="user-presets-panel">
-        <div class="user-presets-title">My Presets<button class="presets-close" id="presets-close" title="Hide" aria-label="Hide presets">×</button></div>
+        <div class="user-presets-title">Extras<button class="presets-close" id="presets-close" title="Hide" aria-label="Hide presets">×</button></div>
         <div class="save-preset-row">
             <input type="text" id="preset-name-input" placeholder="Name this sound…" maxlength="40" autocomplete="off" spellcheck="false">
             <button class="btn-save-preset" id="btn-save-preset">Save Current</button>
@@ -783,6 +839,12 @@ body.is-mobile .user-presets-sidebar {
             <button class="btn-io" id="btn-export">Export</button>
             <button class="btn-io" id="btn-import">Import</button>
             <input type="file" id="import-file-input" accept=".json,application/json" style="display:none;">
+        </div>
+        <div class="record-row">
+            <button class="btn-record" id="btn-record" title="Record synth output to a WAV file" aria-label="Record audio">
+                <span class="record-dot"></span>
+                <span id="record-label">Record</span>
+            </button>
         </div>
         <div class="user-presets-grid" id="user-presets-grid">
             <span class="no-presets-hint" id="no-presets-hint">No saved presets yet, just save sm idk</span>
@@ -1739,6 +1801,141 @@ importInput.addEventListener('change', e => {
 
 loadUserPresetsFromStorage();
 renderUserPresets();
+
+// ── Audio Recording (records the synth's own output, not the mic) ──────────
+
+let isRecording = false;
+let recNode = null;
+let recSilentGain = null;
+let recChunksL = [];
+let recChunksR = [];
+
+function startRecording() {
+    if (isRecording) return;
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+
+    recChunksL = [];
+    recChunksR = [];
+
+    // ScriptProcessorNode taps the signal right before it hits the speakers
+    // so the recording matches exactly what's audible (all FX included).
+    recNode = audioCtx.createScriptProcessor(4096, 2, 2);
+    recSilentGain = audioCtx.createGain();
+    recSilentGain.gain.value = 0; // must connect to destination to run, but silently
+
+    analyser.connect(recNode);
+    recNode.connect(recSilentGain);
+    recSilentGain.connect(audioCtx.destination);
+
+    recNode.onaudioprocess = (e) => {
+        const inL = e.inputBuffer.getChannelData(0);
+        const inR = e.inputBuffer.numberOfChannels > 1 ? e.inputBuffer.getChannelData(1) : inL;
+        recChunksL.push(new Float32Array(inL));
+        recChunksR.push(new Float32Array(inR));
+    };
+
+    isRecording = true;
+    updateRecordUI();
+}
+
+function stopRecording() {
+    if (!isRecording) return;
+    isRecording = false;
+
+    try { analyser.disconnect(recNode); } catch(e) {}
+    try { recNode.disconnect(); } catch(e) {}
+    try { recSilentGain.disconnect(); } catch(e) {}
+    if (recNode) recNode.onaudioprocess = null;
+    recNode = null;
+    recSilentGain = null;
+
+    updateRecordUI();
+    exportRecordingAsWav();
+}
+
+function updateRecordUI() {
+    const btn = document.getElementById('btn-record');
+    const label = document.getElementById('record-label');
+    if (!btn || !label) return;
+    btn.classList.toggle('recording', isRecording);
+    label.textContent = isRecording ? 'Stop' : 'Record';
+}
+
+function mergeFloat32(chunks, totalLength) {
+    const result = new Float32Array(totalLength);
+    let offset = 0;
+    for (const chunk of chunks) {
+        result.set(chunk, offset);
+        offset += chunk.length;
+    }
+    return result;
+}
+
+function encodeWav(samplesL, samplesR, sampleRate) {
+    const numChannels  = 2;
+    const bytesPerSamp = 2; // 16-bit PCM
+    const blockAlign   = numChannels * bytesPerSamp;
+    const numFrames    = samplesL.length;
+    const dataSize     = numFrames * blockAlign;
+    const buffer       = new ArrayBuffer(44 + dataSize);
+    const view         = new DataView(buffer);
+
+    function writeString(offset, str) {
+        for (let i = 0; i < str.length; i++) view.setUint8(offset + i, str.charCodeAt(i));
+    }
+
+    writeString(0, 'RIFF');
+    view.setUint32(4, 36 + dataSize, true);
+    writeString(8, 'WAVE');
+    writeString(12, 'fmt ');
+    view.setUint32(16, 16, true);          // fmt chunk size
+    view.setUint16(20, 1, true);           // PCM format
+    view.setUint16(22, numChannels, true);
+    view.setUint32(24, sampleRate, true);
+    view.setUint32(28, sampleRate * blockAlign, true); // byte rate
+    view.setUint16(32, blockAlign, true);
+    view.setUint16(34, 16, true);          // bits per sample
+    writeString(36, 'data');
+    view.setUint32(40, dataSize, true);
+
+    let offset = 44;
+    for (let i = 0; i < numFrames; i++) {
+        let sL = Math.max(-1, Math.min(1, samplesL[i]));
+        view.setInt16(offset, sL < 0 ? sL * 0x8000 : sL * 0x7FFF, true);
+        offset += 2;
+        let sR = Math.max(-1, Math.min(1, samplesR[i]));
+        view.setInt16(offset, sR < 0 ? sR * 0x8000 : sR * 0x7FFF, true);
+        offset += 2;
+    }
+
+    return buffer;
+}
+
+function exportRecordingAsWav() {
+    const totalLength = recChunksL.reduce((sum, c) => sum + c.length, 0);
+    if (totalLength === 0) return;
+
+    const samplesL  = mergeFloat32(recChunksL, totalLength);
+    const samplesR  = mergeFloat32(recChunksR, totalLength);
+    const wavBuffer = encodeWav(samplesL, samplesR, audioCtx.sampleRate);
+    const blob      = new Blob([wavBuffer], { type: 'audio/wav' });
+    const url       = URL.createObjectURL(blob);
+    const a         = document.createElement('a');
+    a.href = url;
+    a.download = 'audio.wav';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+
+    recChunksL = [];
+    recChunksR = [];
+}
+
+document.getElementById('btn-record').addEventListener('click', () => {
+    if (isRecording) stopRecording();
+    else startRecording();
+});
 
 // ── Mobile detection + collapsible presets panel ────────────────────────────
 
