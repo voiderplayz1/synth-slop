@@ -785,6 +785,14 @@ body.is-mobile .user-presets-sidebar {
                     <input type="range" id="sl-dist" min="0" max="1" step="0.01" value="0">
                 </div>
                 <div class="ctrl">
+                    <div class="ctrl-label"><span>Overdrive</span><span id="val-overdrive">0.00</span></div>
+                    <input type="range" id="sl-overdrive" min="0" max="1" step="0.01" value="0">
+                </div>
+                <div class="ctrl">
+                    <div class="ctrl-label"><span>Fuzz</span><span id="val-fuzz">0.00</span></div>
+                    <input type="range" id="sl-fuzz" min="0" max="1" step="0.01" value="0">
+                </div>
+                <div class="ctrl">
                     <div class="ctrl-label"><span>Bitcrush</span><span id="val-crush">16</span></div>
                     <input type="range" id="sl-crush" min="1" max="16" step="0.5" value="16">
                 </div>
@@ -911,6 +919,81 @@ const distWet     = audioCtx.createGain();
 const distDryPass = audioCtx.createGain();
 distWet.gain.value     = 0;
 distDryPass.gain.value = 1;
+const distStageOut = audioCtx.createGain();
+
+// ── Overdrive: smooth tanh-based soft-clip saturation (warm, gentle) ──
+function makeOverdriveCurve(amount) {
+    const n = 256, curve = new Float32Array(n);
+    if (amount <= 0) {
+        for (let i = 0; i < n; i++) curve[i] = (i * 2) / n - 1;
+        return curve;
+    }
+    const drive = 1 + amount * 19; // 1 → 20
+    const norm  = Math.tanh(drive);
+    for (let i = 0; i < n; i++) {
+        const x = (i * 2) / n - 1;
+        curve[i] = Math.tanh(x * drive) / norm;
+    }
+    return curve;
+}
+const odNode = audioCtx.createWaveShaper();
+odNode.curve = makeOverdriveCurve(0);
+odNode.oversample = '4x';
+const odWet     = audioCtx.createGain();
+const odDryPass = audioCtx.createGain();
+odWet.gain.value     = 0;
+odDryPass.gain.value = 1;
+const odStageOut = audioCtx.createGain();
+
+// ── Fuzz: hard, asymmetric near-square clipping (buzzy, aggressive) ──
+function makeFuzzCurve(amount) {
+    const n = 1024, curve = new Float32Array(n);
+    if (amount <= 0) {
+        for (let i = 0; i < n; i++) curve[i] = (i * 2) / n - 1;
+        return curve;
+    }
+    const drive = 1 + amount * 60;
+    for (let i = 0; i < n; i++) {
+        const x = (i * 2) / n - 1;
+        const y = Math.tanh(x * drive);
+        // squash toward a harder square shape as amount rises
+        const squared = Math.sign(y) * Math.pow(Math.abs(y), 1 - amount * 0.65);
+        // slight asymmetry gives it that buzzy, gated fuzz-pedal grit
+        curve[i] = squared * (y >= 0 ? 1 : 0.9);
+    }
+    return curve;
+}
+const fuzzNode = audioCtx.createWaveShaper();
+fuzzNode.curve = makeFuzzCurve(0);
+fuzzNode.oversample = '4x';
+const fuzzWet     = audioCtx.createGain();
+const fuzzDryPass = audioCtx.createGain();
+fuzzWet.gain.value     = 0;
+fuzzDryPass.gain.value = 1;
+const fuzzStageOut = audioCtx.createGain();
+
+// ── Bitcrush: real bit-depth quantization (was a dead knob before — this
+// ScriptProcessorNode actually reduces the sample resolution in-line). ──
+const crushNode = audioCtx.createScriptProcessor(1024, 2, 2);
+crushNode.onaudioprocess = (e) => {
+    const inL  = e.inputBuffer.getChannelData(0);
+    const inR  = e.inputBuffer.numberOfChannels > 1 ? e.inputBuffer.getChannelData(1) : inL;
+    const outL = e.outputBuffer.getChannelData(0);
+    const outR = e.outputBuffer.getChannelData(1);
+    const depth = Math.max(1, Math.min(16, bitDepth));
+    if (depth >= 16) {
+        // effectively clean — skip quantization math
+        outL.set(inL);
+        outR.set(inR);
+        return;
+    }
+    const levels = Math.pow(2, depth);
+    const step = 2 / levels;
+    for (let i = 0; i < inL.length; i++) {
+        outL[i] = Math.round(inL[i] / step) * step;
+        outR[i] = Math.round(inR[i] / step) * step;
+    }
+};
 
 const flangerDelay    = audioCtx.createDelay(0.02);
 const flangerFeedback = audioCtx.createGain();
@@ -976,8 +1059,23 @@ let bitDepth = 16;
 distInput.connect(distNode);
 distInput.connect(distDryPass);
 distNode.connect(distWet);
-distWet.connect(filter);
-distDryPass.connect(filter);
+distWet.connect(distStageOut);
+distDryPass.connect(distStageOut);
+
+distStageOut.connect(odNode);
+distStageOut.connect(odDryPass);
+odNode.connect(odWet);
+odWet.connect(odStageOut);
+odDryPass.connect(odStageOut);
+
+odStageOut.connect(fuzzNode);
+odStageOut.connect(fuzzDryPass);
+fuzzNode.connect(fuzzWet);
+fuzzWet.connect(fuzzStageOut);
+fuzzDryPass.connect(fuzzStageOut);
+
+fuzzStageOut.connect(crushNode);
+crushNode.connect(filter);
 
 filter.connect(dryGain);
 filter.connect(convolver);
@@ -1039,6 +1137,8 @@ const params = {
     res:       0.001,
     volume:    0.15,
     dist:      0,
+    overdrive: 0,
+    fuzz:      0,
     crush:     16,
     flanger:   0,
     bassboost: 0,
@@ -1091,6 +1191,12 @@ function applyAudioParams() {
     distNode.curve = makeDistCurve(params.dist);
     distWet.gain.setTargetAtTime(params.dist, t, 0.05);
     distDryPass.gain.setTargetAtTime(1 - params.dist * 0.7, t, 0.05);
+    odNode.curve = makeOverdriveCurve(params.overdrive);
+    odWet.gain.setTargetAtTime(params.overdrive, t, 0.05);
+    odDryPass.gain.setTargetAtTime(1 - params.overdrive * 0.7, t, 0.05);
+    fuzzNode.curve = makeFuzzCurve(params.fuzz);
+    fuzzWet.gain.setTargetAtTime(params.fuzz, t, 0.05);
+    fuzzDryPass.gain.setTargetAtTime(1 - params.fuzz * 0.7, t, 0.05);
     bitDepth = params.crush;
     flangerLFO.frequency.setTargetAtTime(params.flanger, t, 0.05);
     flangerMix.gain.setTargetAtTime(params.flanger > 0 ? 0.45 : 0, t, 0.1);
@@ -1118,6 +1224,8 @@ const sliders = [
     { id:'sl-volume',         key:'volume',            label:'val-volume',         parse:parseFloat, cb: v => { masterGain.gain.setTargetAtTime(v, audioCtx.currentTime, 0.05); } },
     { id:'sl-octave',         key:'_octave',           label:'val-octave',         parse:parseInt,   cb: v => { octaveShift = v; } },
     { id:'sl-dist',           key:'dist',              label:'val-dist',           parse:parseFloat, cb: v => { distNode.curve = makeDistCurve(v); distWet.gain.setTargetAtTime(v, audioCtx.currentTime, 0.05); distDryPass.gain.setTargetAtTime(1-v*0.7, audioCtx.currentTime, 0.05); } },
+    { id:'sl-overdrive',      key:'overdrive',         label:'val-overdrive',      parse:parseFloat, cb: v => { odNode.curve = makeOverdriveCurve(v); odWet.gain.setTargetAtTime(v, audioCtx.currentTime, 0.05); odDryPass.gain.setTargetAtTime(1-v*0.7, audioCtx.currentTime, 0.05); } },
+    { id:'sl-fuzz',           key:'fuzz',              label:'val-fuzz',           parse:parseFloat, cb: v => { fuzzNode.curve = makeFuzzCurve(v); fuzzWet.gain.setTargetAtTime(v, audioCtx.currentTime, 0.05); fuzzDryPass.gain.setTargetAtTime(1-v*0.7, audioCtx.currentTime, 0.05); } },
     { id:'sl-crush',          key:'crush',             label:'val-crush',          parse:parseFloat, cb: v => { bitDepth = v; } },
     { id:'sl-flanger',        key:'flanger',           label:'val-flanger',        parse:parseFloat, cb: v => { flangerLFO.frequency.setTargetAtTime(v, audioCtx.currentTime, 0.05); flangerMix.gain.setTargetAtTime(v > 0 ? 0.45 : 0, audioCtx.currentTime, 0.1); } },
     { id:'sl-bassboost',      key:'bassboost',         label:'val-bassboost',      parse:parseFloat, cb: v => { bassBoostEQ.gain.setTargetAtTime(v, audioCtx.currentTime, 0.05); } },
@@ -1656,6 +1764,7 @@ function applyUserPreset(state) {
         voices:'sl-voices', spread:'sl-spread', attack:'sl-attack', release:'sl-release',
         reverb:'sl-reverb', delay:'sl-delay', delaytime:'sl-delaytime', chorus:'sl-chorus',
         filter:'sl-filter', res:'sl-res', volume:'sl-volume', dist:'sl-dist',
+        overdrive:'sl-overdrive', fuzz:'sl-fuzz',
         crush:'sl-crush', flanger:'sl-flanger', bassboost:'sl-bassboost', atmos:'sl-atmos'
     };
     for (const [k, id] of Object.entries(map)) {
