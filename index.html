@@ -525,6 +525,64 @@ body.is-mobile .user-presets-sidebar {
     50% { box-shadow: 0 0 0 5px rgba(239, 68, 68, 0); }
 }
 
+.record-format-picker {
+    display: none;
+    width: 100%;
+    align-items: center;
+    gap: 6px;
+}
+
+.record-format-hint {
+    font-family: 'Inter', sans-serif;
+    font-size: 0.68rem;
+    color: var(--text-dim);
+    white-space: nowrap;
+    padding-right: 2px;
+}
+
+.btn-format {
+    flex: 1;
+    background: var(--bg-module);
+    color: var(--text-main);
+    border: 1px solid var(--border-dark);
+    border-radius: var(--radius-sm);
+    padding: 8px 10px;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.btn-format:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+    box-shadow: 0 2px 8px var(--accent-glow);
+}
+
+.btn-format-cancel {
+    flex: 0 0 auto;
+    background: transparent;
+    color: var(--text-dim);
+    border: 1px solid var(--border-dark);
+    border-radius: var(--radius-sm);
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.85rem;
+    line-height: 1;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.btn-format-cancel:hover {
+    border-color: #ef4444;
+    color: #ef4444;
+}
+
 .btn-io {
     flex: 1;
     background: var(--bg-module);
@@ -849,10 +907,16 @@ body.is-mobile .user-presets-sidebar {
             <input type="file" id="import-file-input" accept=".json,application/json" style="display:none;">
         </div>
         <div class="record-row">
-            <button class="btn-record" id="btn-record" title="Record synth output to a WAV file" aria-label="Record audio">
+            <button class="btn-record" id="btn-record" title="Record synth output" aria-label="Record audio">
                 <span class="record-dot"></span>
                 <span id="record-label">Record</span>
             </button>
+            <div class="record-format-picker" id="record-format-picker">
+                <span class="record-format-hint">Save as</span>
+                <button class="btn-format" id="btn-format-wav" data-format="wav">WAV</button>
+                <button class="btn-format" id="btn-format-opus" data-format="opus">Opus</button>
+                <button class="btn-format-cancel" id="btn-format-cancel" title="Discard recording" aria-label="Discard recording">×</button>
+            </div>
         </div>
         <div class="user-presets-grid" id="user-presets-grid">
             <span class="no-presets-hint" id="no-presets-hint">No saved presets yet, just save sm idk</span>
@@ -972,9 +1036,14 @@ fuzzWet.gain.value     = 0;
 fuzzDryPass.gain.value = 1;
 const fuzzStageOut = audioCtx.createGain();
 
-// ── Bitcrush: real bit-depth quantization (was a dead knob before — this
-// ScriptProcessorNode actually reduces the sample resolution in-line). ──
+// ── Bitcrush: real bit-depth quantization + sample-rate reduction. Bit-depth
+// quantization ALONE is barely audible except at extreme settings — the
+// characterful "crunchy 8-bit" sound comes from sample-and-hold downsampling,
+// so both are combined here to make the effect actually audible. ──
 const crushNode = audioCtx.createScriptProcessor(1024, 2, 2);
+let crushHoldCounter = 0;
+let crushHeldL = 0;
+let crushHeldR = 0;
 crushNode.onaudioprocess = (e) => {
     const inL  = e.inputBuffer.getChannelData(0);
     const inR  = e.inputBuffer.numberOfChannels > 1 ? e.inputBuffer.getChannelData(1) : inL;
@@ -982,16 +1051,25 @@ crushNode.onaudioprocess = (e) => {
     const outR = e.outputBuffer.getChannelData(1);
     const depth = Math.max(1, Math.min(16, bitDepth));
     if (depth >= 16) {
-        // effectively clean — skip quantization math
+        // effectively clean — skip quantization/downsampling math
         outL.set(inL);
         outR.set(inR);
+        crushHoldCounter = 0;
         return;
     }
     const levels = Math.pow(2, depth);
     const step = 2 / levels;
+    // Lower bit depth also means more aggressive sample-and-hold (classic
+    // lo-fi "stepped" sound). Depth 15.5 → hold 1 (barely there); depth 1 → hold ~33.
+    const holdSize = Math.max(1, Math.round((16 - depth) * 2.2));
     for (let i = 0; i < inL.length; i++) {
-        outL[i] = Math.round(inL[i] / step) * step;
-        outR[i] = Math.round(inR[i] / step) * step;
+        if (crushHoldCounter === 0) {
+            crushHeldL = Math.round(inL[i] / step) * step;
+            crushHeldR = Math.round(inR[i] / step) * step;
+        }
+        outL[i] = crushHeldL;
+        outR[i] = crushHeldR;
+        crushHoldCounter = (crushHoldCounter + 1) % holdSize;
     }
 };
 
@@ -1912,6 +1990,10 @@ loadUserPresetsFromStorage();
 renderUserPresets();
 
 // ── Audio Recording (records the synth's own output, not the mic) ──────────
+// Runs two taps in parallel while recording: a raw-PCM ScriptProcessor tap
+// (for an exact WAV encode) and, where supported, a MediaRecorder tap
+// producing compressed Opus audio — so on stop the user can pick either
+// format immediately with nothing needing to be re-recorded.
 
 let isRecording = false;
 let recNode = null;
@@ -1919,12 +2001,30 @@ let recSilentGain = null;
 let recChunksL = [];
 let recChunksR = [];
 
+let opusMimeType   = null;
+let opusStreamDest = null;
+let opusRecorder   = null;
+let opusChunks     = [];
+let opusBlob        = null;
+
+function getSupportedOpusMime() {
+    if (typeof MediaRecorder === 'undefined' || !MediaRecorder.isTypeSupported) return null;
+    const candidates = ['audio/webm;codecs=opus', 'audio/ogg;codecs=opus'];
+    for (const m of candidates) {
+        if (MediaRecorder.isTypeSupported(m)) return m;
+    }
+    return null;
+}
+
 function startRecording() {
     if (isRecording) return;
     if (audioCtx.state === 'suspended') audioCtx.resume();
 
+    hideFormatPicker();
     recChunksL = [];
     recChunksR = [];
+    opusChunks = [];
+    opusBlob = null;
 
     // ScriptProcessorNode taps the signal right before it hits the speakers
     // so the recording matches exactly what's audible (all FX included).
@@ -1943,6 +2043,21 @@ function startRecording() {
         recChunksR.push(new Float32Array(inR));
     };
 
+    // Parallel Opus tap, if the browser can encode it (e.g. Chromium-based
+    // browsers like Comet). Silently skipped otherwise — WAV still works.
+    opusMimeType = getSupportedOpusMime();
+    if (opusMimeType) {
+        opusStreamDest = audioCtx.createMediaStreamDestination();
+        analyser.connect(opusStreamDest);
+        opusRecorder = new MediaRecorder(opusStreamDest.stream, { mimeType: opusMimeType });
+        opusRecorder.ondataavailable = (e) => {
+            if (e.data && e.data.size > 0) opusChunks.push(e.data);
+        };
+        opusRecorder.start();
+    } else {
+        opusRecorder = null;
+    }
+
     isRecording = true;
     updateRecordUI();
 }
@@ -1959,7 +2074,23 @@ function stopRecording() {
     recSilentGain = null;
 
     updateRecordUI();
-    exportRecordingAsWav();
+
+    const finish = () => {
+        try { analyser.disconnect(opusStreamDest); } catch(e) {}
+        opusStreamDest = null;
+        opusRecorder = null;
+        showFormatPicker();
+    };
+
+    if (opusRecorder && opusRecorder.state !== 'inactive') {
+        opusRecorder.onstop = () => {
+            opusBlob = opusChunks.length ? new Blob(opusChunks, { type: opusMimeType }) : null;
+            finish();
+        };
+        opusRecorder.stop();
+    } else {
+        finish();
+    }
 }
 
 function updateRecordUI() {
@@ -1968,6 +2099,29 @@ function updateRecordUI() {
     if (!btn || !label) return;
     btn.classList.toggle('recording', isRecording);
     label.textContent = isRecording ? 'Stop' : 'Record';
+}
+
+function showFormatPicker() {
+    const totalLength = recChunksL.reduce((sum, c) => sum + c.length, 0);
+    if (totalLength === 0 && !opusBlob) return; // nothing captured, nothing to pick
+
+    // If Opus isn't available in this browser, skip the picker entirely
+    // and just export WAV like before — no point asking.
+    if (!opusBlob) {
+        exportRecordingAsWav();
+        return;
+    }
+
+    document.getElementById('btn-record').style.display = 'none';
+    const picker = document.getElementById('record-format-picker');
+    picker.style.display = 'flex';
+}
+
+function hideFormatPicker() {
+    const picker = document.getElementById('record-format-picker');
+    if (picker) picker.style.display = 'none';
+    const btn = document.getElementById('btn-record');
+    if (btn) btn.style.display = '';
 }
 
 function mergeFloat32(chunks, totalLength) {
@@ -2020,30 +2174,61 @@ function encodeWav(samplesL, samplesR, sampleRate) {
     return buffer;
 }
 
-function exportRecordingAsWav() {
-    const totalLength = recChunksL.reduce((sum, c) => sum + c.length, 0);
-    if (totalLength === 0) return;
-
-    const samplesL  = mergeFloat32(recChunksL, totalLength);
-    const samplesR  = mergeFloat32(recChunksR, totalLength);
-    const wavBuffer = encodeWav(samplesL, samplesR, audioCtx.sampleRate);
-    const blob      = new Blob([wavBuffer], { type: 'audio/wav' });
-    const url       = URL.createObjectURL(blob);
-    const a         = document.createElement('a');
+function downloadBlob(blob, filename) {
+    const url = URL.createObjectURL(blob);
+    const a   = document.createElement('a');
     a.href = url;
-    a.download = 'audio.wav';
+    a.download = filename;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+function exportRecordingAsWav() {
+    const totalLength = recChunksL.reduce((sum, c) => sum + c.length, 0);
+    if (totalLength === 0) { recChunksL = []; recChunksR = []; opusBlob = null; return; }
+
+    const samplesL  = mergeFloat32(recChunksL, totalLength);
+    const samplesR  = mergeFloat32(recChunksR, totalLength);
+    const wavBuffer = encodeWav(samplesL, samplesR, audioCtx.sampleRate);
+    downloadBlob(new Blob([wavBuffer], { type: 'audio/wav' }), 'audio.wav');
 
     recChunksL = [];
     recChunksR = [];
+    opusBlob = null;
+}
+
+function exportRecordingAsOpus() {
+    if (!opusBlob) return;
+    const ext = opusMimeType && opusMimeType.includes('ogg') ? 'ogg' : 'webm';
+    downloadBlob(opusBlob, 'audio.' + ext);
+
+    recChunksL = [];
+    recChunksR = [];
+    opusBlob = null;
 }
 
 document.getElementById('btn-record').addEventListener('click', () => {
     if (isRecording) stopRecording();
     else startRecording();
+});
+
+document.getElementById('btn-format-wav').addEventListener('click', () => {
+    exportRecordingAsWav();
+    hideFormatPicker();
+});
+
+document.getElementById('btn-format-opus').addEventListener('click', () => {
+    exportRecordingAsOpus();
+    hideFormatPicker();
+});
+
+document.getElementById('btn-format-cancel').addEventListener('click', () => {
+    recChunksL = [];
+    recChunksR = [];
+    opusBlob = null;
+    hideFormatPicker();
 });
 
 // ── Mobile detection + collapsible presets panel ────────────────────────────
