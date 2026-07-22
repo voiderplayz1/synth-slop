@@ -769,7 +769,7 @@ body.is-mobile .user-presets-sidebar {
                 </div>
                 <div class="ctrl">
                     <div class="ctrl-label"><span>Octave</span><span id="val-octave">0</span></div>
-                    <input type="range" id="sl-octave" min="-3" max="3" step="1" value="0">
+                    <input type="range" id="sl-octave" min="-3" max="3" step="0.1" value="0">
                 </div>
             </div>
         </div>
@@ -1300,7 +1300,7 @@ const sliders = [
     { id:'sl-filter',         key:'filter',            label:'val-filter',         parse:parseFloat, cb: v => { filter.frequency.setTargetAtTime(v, audioCtx.currentTime, 0.05); } },
     { id:'sl-res',            key:'res',               label:'val-res',            parse:parseFloat, cb: v => { filter.Q.value = v; } },
     { id:'sl-volume',         key:'volume',            label:'val-volume',         parse:parseFloat, cb: v => { masterGain.gain.setTargetAtTime(v, audioCtx.currentTime, 0.05); } },
-    { id:'sl-octave',         key:'_octave',           label:'val-octave',         parse:parseInt,   cb: v => { octaveShift = v; } },
+    { id:'sl-octave',         key:'_octave',           label:'val-octave',         parse:parseFloat, cb: v => { octaveShift = v; } },
     { id:'sl-dist',           key:'dist',              label:'val-dist',           parse:parseFloat, cb: v => { distNode.curve = makeDistCurve(v); distWet.gain.setTargetAtTime(v, audioCtx.currentTime, 0.05); distDryPass.gain.setTargetAtTime(1-v*0.7, audioCtx.currentTime, 0.05); } },
     { id:'sl-overdrive',      key:'overdrive',         label:'val-overdrive',      parse:parseFloat, cb: v => { odNode.curve = makeOverdriveCurve(v); odWet.gain.setTargetAtTime(v, audioCtx.currentTime, 0.05); odDryPass.gain.setTargetAtTime(1-v*0.7, audioCtx.currentTime, 0.05); } },
     { id:'sl-fuzz',           key:'fuzz',              label:'val-fuzz',           parse:parseFloat, cb: v => { fuzzNode.curve = makeFuzzCurve(v); fuzzWet.gain.setTargetAtTime(v, audioCtx.currentTime, 0.05); fuzzDryPass.gain.setTargetAtTime(1-v*0.7, audioCtx.currentTime, 0.05); } },
@@ -1315,7 +1315,12 @@ const sliders = [
 function labelText(s, v) {
     if (s.key === 'filter')          return fmt(v, 0);
     if (s.key === 'bassboost')       return parseFloat(v) % 1 === 0 ? '+' + v + 'dB' : '+' + parseFloat(v).toFixed(1) + 'dB';
-    if (s.key === '_octave')         return v >= 0 ? '+' + v : String(v);
+    if (s.key === '_octave') {
+        const n = parseFloat(v);
+        const rounded = Math.round(n * 10) / 10;
+        const str = rounded % 1 === 0 ? String(rounded) : rounded.toFixed(1);
+        return rounded >= 0 ? '+' + str : str;
+    }
     if (s.key === '_harmonyVoices')  return String(v);
     if (s.key === '_harmonyVol')     return fmt(v);
     if (s.key === 'crush')           return parseFloat(v) % 1 === 0 ? String(v) : parseFloat(v).toFixed(1);
